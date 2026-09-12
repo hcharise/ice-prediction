@@ -3,16 +3,21 @@ import json
 import time
 
 PAGE_URL = "https://www.facebook.com/COIceconditions"
+PROFILE_DIR = "./facebook_playwright_profile"
+
 
 def main():
     with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=False
+
+        # LOAD PAGE
+
+        context = p.chromium.launch_persistent_context(
+            PROFILE_DIR,
+            headless=False,
+            viewport={"width": 1400, "height": 1000},
         )
 
-        page = browser.new_page(
-            viewport={"width": 1400, "height": 1000}
-        )
+        page = context.pages[0] if context.pages else context.new_page()
 
         print("Opening Facebook page...")
         page.goto(
@@ -21,13 +26,21 @@ def main():
             timeout=60_000
         )
 
-        # Give the page time to render.
-        time.sleep(5)
+        # LOG IN
+
+        print(
+            "\nIf Facebook asks you to log in, log in manually in the browser.\n"
+            "Once you can see the Colorado Ice Conditions page, return here."
+        )
+
+        input("Press ENTER after the page is fully visible... ")
+
+        # SCROLL & SAVE POSTS
 
         # Scroll a few times to load additional posts.
-        for i in range(5):
-            print(f"Scroll {i + 1}/5")
-            page.mouse.wheel(0, 2500)
+        for i in range(20):
+            print(f"Scroll {i + 1}/20")
+            page.mouse.wheel(0, 1800)
             time.sleep(3)
 
         # Facebook commonly represents feed posts as article-like elements.
@@ -36,6 +49,8 @@ def main():
         print(f"Found {articles.count()} article elements")
 
         posts = []
+
+        # ADD POSTS TO JSON
 
         for i in range(articles.count()):
             article = articles.nth(i)
@@ -56,12 +71,13 @@ def main():
         with open("facebook_posts_poc.json", "w", encoding="utf-8") as f:
             json.dump(posts, f, indent=2, ensure_ascii=False)
 
-        print(f"Saved {len(posts)} items to facebook_posts_poc.json")
 
-        # Keep browser open briefly so you can inspect what loaded.
-        time.sleep(10)
+        # CLOSE OUT
 
-        browser.close()
+        print(f"Saved {len(posts)} likely posts")
+
+        input("Press ENTER to close the browser... ")
+        context.close()
 
 
 if __name__ == "__main__":
