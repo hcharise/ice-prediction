@@ -38,6 +38,7 @@ def main():
         # SCROLL & SAVE POSTS
 
         import re
+        items = []
 
         # Scroll a few times to load additional posts.
         for i in range(20):
@@ -49,7 +50,6 @@ def main():
 
             print(f"Found {articles.count()} article elements")
 
-            items = []
 
             for i in range(articles.count()):
                 article = articles.nth(i)
@@ -116,14 +116,17 @@ def main():
                     "links": link_info,
                 })
 
+        # END OF SCROLL LOOPS
+
+        # SAVE FOUND TEXT TO JSON
         with open("facebook_debug_articles.json", "w", encoding="utf-8") as f:
             json.dump(items, f, indent=2, ensure_ascii=False)
 
         print(f"Saved {len(items)} articles for inspection")
 
+        # CLOSE BROWSER
         input("Press ENTER to close the browser... ")
         context.close()
-
 
 if __name__ == "__main__":
     main()
