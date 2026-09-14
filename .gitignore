@@ -1,3 +1,7 @@
+
+# FACEBOOK LOGIN DATA
 facebook_playwright_profile/
 
-facebook_posts_poc.json
+# JSON OUTPUT FILES
+facebook_posts.json
+facebook_comments&replies.json

@@ -38,19 +38,18 @@ def main():
 
         input("Press ENTER after the page is fully visible... ")
 
-        # SCROLL & SAVE POSTS
+        # SCROLL & SAVE POSTS/COMMENTS/REPLIES
 
-        items = []
+        items = [] # main posts
+        posts = [] # comments & replies
 
-        # Scroll a few times to load additional posts.
+        # Scroll to load more posts
         for i in range(20):
             print(f"Scroll {i + 1}/20")
             page.mouse.wheel(0, 1800)
             time.sleep(3)
 
             # EXTRACT POSTS
-
-            # FIND POSSIBLE POST MESSAGE BODIES
 
             message_elements = page.locator(
                 '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
@@ -69,9 +68,26 @@ def main():
                 if not message_text:
                     continue
 
+                # REPLACING THIS W/ JSON ******************
                 print("\nPOSSIBLE POST MESSAGE:")
                 print(message_text[:500])
                 print("-" * 50)
+
+                metadata = {
+                    "type": "post",
+                    "timestamp": "WILL BE TIMESTAMP HERE",
+                    "post_url": "WILL BE URL HERE",
+                    "text": message_text
+                }
+
+                posts.append({
+                    "index": i,
+                    "type": metadata["type"],
+                    "timestamp": metadata["timestamp"],
+                    "post_url": metadata["post_url"],
+                    "text": metadata["text"],
+                })
+
 
             # EXTRACT COMMENTS & REPLIES
 
@@ -192,10 +208,15 @@ def main():
         # END OF SCROLL LOOPS
 
         # SAVE FOUND TEXT TO JSON
-        with open("facebook_debug_articles.json", "w", encoding="utf-8") as f:
+        with open("facebook_posts.json", "w", encoding="utf-8") as f:
+                    json.dump(posts, f, indent=2, ensure_ascii=False)
+
+        with open("facebook_comments&replies.json", "w", encoding="utf-8") as f:
             json.dump(items, f, indent=2, ensure_ascii=False)
 
-        print(f"Saved {len(items)} articles for inspection")
+        print(f"Saved {len(posts)} posts for inspection")
+
+        print(f"Saved {len(items)} comments & replies for inspection")
 
         # CLOSE BROWSER
         input("Press ENTER to close the browser... ")
