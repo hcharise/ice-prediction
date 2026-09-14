@@ -48,6 +48,33 @@ def main():
             page.mouse.wheel(0, 1800)
             time.sleep(3)
 
+            # EXTRACT POSTS
+
+            # FIND POSSIBLE POST MESSAGE BODIES
+
+            message_elements = page.locator(
+                '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+            )
+
+            print(f"Found {message_elements.count()} possible post message elements")
+
+            for j in range(message_elements.count()):
+                message = message_elements.nth(j)
+
+                try:
+                    message_text = message.inner_text(timeout=3000).strip()
+                except Exception:
+                    continue
+
+                if not message_text:
+                    continue
+
+                print("\nPOSSIBLE POST MESSAGE:")
+                print(message_text[:500])
+                print("-" * 50)
+
+            # EXTRACT COMMENTS & REPLIES
+
             articles = page.locator('[role="article"]')
 
             print(f"Found {articles.count()} article elements")
@@ -161,7 +188,6 @@ def main():
                     "text": text,
                     "links": link_info,
                 })
-
 
         # END OF SCROLL LOOPS
 
