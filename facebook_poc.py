@@ -1,6 +1,9 @@
 from playwright.sync_api import sync_playwright
 import json
 import time
+from urllib.parse import urlparse, parse_qs
+import re
+
 
 PAGE_URL = "https://www.facebook.com/COIceconditions"
 PROFILE_DIR = "./facebook_playwright_profile"
@@ -37,7 +40,6 @@ def main():
 
         # SCROLL & SAVE POSTS
 
-        import re
         items = []
 
         # Scroll a few times to load additional posts.
@@ -50,7 +52,6 @@ def main():
 
             print(f"Found {articles.count()} article elements")
 
-
             for i in range(articles.count()):
                 article = articles.nth(i)
 
@@ -58,15 +59,6 @@ def main():
                     text = article.inner_text(timeout=3000).strip()
                 except Exception:
                     continue
-
-                # A comment/reply is often an <article> nested inside the
-                # top-level post's <article>.
-                is_nested = article.evaluate("""
-                    el => {
-                        const parent = el.parentElement;
-                        return parent ? !!parent.closest('[role="article"]') : false;
-                    }
-                """)
 
                 links = article.locator("a")
                 link_info = []
@@ -109,12 +101,67 @@ def main():
                             "aria_label": aria_label,
                         })
 
+                metadata = {
+                    "type": "unknown",
+                    "timestamp": None,
+                    "post_url": None,
+                    "comment_id": None,
+                    "reply_comment_id": None,
+                }
+
+                for link in link_info:
+                    href = link.get("href") or ""
+
+                    if "/COIceconditions/posts/" not in href:
+                        continue
+
+                    parsed = urlparse(href)
+                    params = parse_qs(parsed.query)
+
+                    clean_post_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+
+                    if "reply_comment_id" in params:
+                        metadata = {
+                            "type": "reply",
+                            "timestamp": link.get("aria_label"),
+                            "post_url": clean_post_url,
+                            "comment_id": params.get("comment_id", [None])[0],
+                            "reply_comment_id": params.get("reply_comment_id", [None])[0],
+                        }
+                        break
+
+                    elif "comment_id" in params:
+                        metadata = {
+                            "type": "comment",
+                            "timestamp": link.get("aria_label"),
+                            "post_url": clean_post_url,
+                            "comment_id": params.get("comment_id", [None])[0],
+                            "reply_comment_id": None,
+                        }
+                        break
+
+                    else:
+                        metadata = {
+                            "type": "post",
+                            "timestamp": link.get("aria_label"),
+                            "post_url": clean_post_url,
+                            "comment_id": None,
+                            "reply_comment_id": None,
+                        }
+                        break
+
+
                 items.append({
                     "index": i,
-                    "is_nested_article": is_nested,
+                    "type": metadata["type"],
+                    "timestamp": metadata["timestamp"],
+                    "post_url": metadata["post_url"],
+                    "comment_id": metadata["comment_id"],
+                    "reply_comment_id": metadata["reply_comment_id"],
                     "text": text,
                     "links": link_info,
                 })
+
 
         # END OF SCROLL LOOPS
 
