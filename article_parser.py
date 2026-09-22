@@ -20,17 +20,9 @@ def extract_comments(articles):
             continue
 
         link_info = extract_links(article)
-
-        metadata = {
-            "type": "unknown",
-            "timestamp": None,
-            "post_url": None,
-            "comment_id": None,
-            "reply_comment_id": None,
-        }
+        metadata = extract_metadata(link_info)
 
         comments.append({
-            "index": i,
             "type": metadata["type"],
             "timestamp": metadata["timestamp"],
             "post_url": metadata["post_url"],
@@ -79,6 +71,55 @@ def extract_links(article):
 
     return link_info
 
-# def extract_metadata():
+def extract_metadata(link_info):
 
+    metadata = {
+            "type": "unknown",
+            "timestamp": None,
+            "post_url": None,
+            "comment_id": None,
+            "reply_comment_id": None,
+        }
 
+    for link in link_info:
+        href = link.get("href") or ""
+
+        if "/COIceconditions/posts/" not in href:
+            continue
+
+        parsed = urlparse(href)
+        params = parse_qs(parsed.query)
+
+        clean_post_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+
+        if "reply_comment_id" in params:
+            metadata = {
+                "type": "reply",
+                "timestamp": link.get("aria_label"),
+                "post_url": clean_post_url,
+                "comment_id": params.get("comment_id", [None])[0],
+                "reply_comment_id": params.get("reply_comment_id", [None])[0],
+            }
+            break
+
+        elif "comment_id" in params:
+            metadata = {
+                "type": "comment",
+                "timestamp": link.get("aria_label"),
+                "post_url": clean_post_url,
+                "comment_id": params.get("comment_id", [None])[0],
+                "reply_comment_id": None,
+            }
+            break
+
+        else:
+            metadata = {
+                "type": "unknown",
+                "timestamp": link.get("aria_label"),
+                "post_url": clean_post_url,
+                "comment_id": None,
+                "reply_comment_id": None,
+            }
+            break
+
+    return metadata
