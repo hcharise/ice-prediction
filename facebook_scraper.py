@@ -1,13 +1,12 @@
 from playwright.sync_api import sync_playwright
 import json
 import time
-from urllib.parse import urlparse, parse_qs
-import re
+from article_parser import extract_comments
 
 
 PAGE_URL = "https://www.facebook.com/COIceconditions" # facebook URL to retrieve posts from
 PROFILE_DIR = "./facebook_playwright_profile" # save facebook credentials
-SCROLL_COUNT = 5 # number of times script will scroll down on facebook page
+SCROLL_COUNT = 1 # number of times script will scroll down on facebook page
 
 
 def main():
@@ -37,11 +36,13 @@ def main():
             "Once you can see the Colorado Ice Conditions page, return here."
         )
 
-        input("Press ENTER after the page is fully visible... ")
+        # may want to return to using input instead of sleep to verify loading?
+        # input("Press ENTER after the page is fully visible... ")
+        time.sleep(5)
 
         # SCROLL & SAVE POSTS/COMMENTS/REPLIES --------------------------------------------------------
 
-        items = [] # stores main posts
+        comments = [] # stores main posts
         posts = [] # stores comments & replies
 
         # Scroll to load more posts
@@ -66,45 +67,7 @@ def main():
                 except Exception:
                     continue
 
-                if not message_text:
-                    continue
-
-                # REPLACING THIS W/ JSON ******************
-                print("\nPOSSIBLE POST MESSAGE:")
-                print(message_text[:500])
-                print("-" * 50)
-
-                metadata = {
-                    "type": "post",
-                    "timestamp": "WILL BE TIMESTAMP HERE",
-                    "post_url": "WILL BE URL HERE",
-                    "text": message_text
-                }
-
-                posts.append({
-                    "index": i,
-                    "type": metadata["type"],
-                    "timestamp": metadata["timestamp"],
-                    "post_url": metadata["post_url"],
-                    "text": metadata["text"],
-                })
-
-
-            # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
-
-            articles = page.locator('[role="article"]')
-
-            print(f"Found {articles.count()} article elements")
-
-            for i in range(articles.count()):
-                article = articles.nth(i)
-
-                try:
-                    text = article.inner_text(timeout=3000).strip()
-                except Exception:
-                    continue
-
-                links = article.locator("a")
+                links = message.locator("a")
                 link_info = []
 
                 for j in range(min(links.count(), 25)):
@@ -146,12 +109,17 @@ def main():
                         })
 
                 metadata = {
-                    "type": "unknown",
+                    "type": "post",
                     "timestamp": None,
                     "post_url": None,
                     "comment_id": None,
                     "reply_comment_id": None,
                 }
+
+                # REPLACING THIS W/ JSON ******************
+                print("\nPOSSIBLE POST MESSAGE:")
+                print(message_text[:500])
+                print("-" * 50)
 
                 for link in link_info:
                     href = link.get("href") or ""
@@ -161,6 +129,8 @@ def main():
 
                     parsed = urlparse(href)
                     params = parse_qs(parsed.query)
+
+                    print(params)
 
                     clean_post_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
 
@@ -194,17 +164,23 @@ def main():
                         }
                         break
 
-
-                items.append({
+                posts.append({
                     "index": i,
                     "type": metadata["type"],
                     "timestamp": metadata["timestamp"],
                     "post_url": metadata["post_url"],
-                    "comment_id": metadata["comment_id"],
-                    "reply_comment_id": metadata["reply_comment_id"],
-                    "text": text,
-                    "links": link_info,
+                    "text": message_text,
+                    "links": link_info
                 })
+
+
+            # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
+
+            articles = page.locator('[role="article"]')
+
+            print(f"Found {articles.count()} article elements")
+
+            comments = extract_comments(articles)
 
         # END OF SCROLL LOOPS -------------------------------------------------------------------------
 
@@ -213,14 +189,15 @@ def main():
                     json.dump(posts, f, indent=2, ensure_ascii=False)
 
         with open("facebook_comments&replies.json", "w", encoding="utf-8") as f:
-            json.dump(items, f, indent=2, ensure_ascii=False)
+            json.dump(comments, f, indent=2, ensure_ascii=False)
 
         print(f"Saved {len(posts)} posts for inspection")
 
-        print(f"Saved {len(items)} comments & replies for inspection")
+        print(f"Saved {len(comments)} comments & replies for inspection")
 
         # CLOSE BROWSER -------------------------------------------------------------------------------
-        input("Press ENTER to close the browser... ")
+        # may want to revert to user prompting browser closing in the future
+        # input("Press ENTER to close the browser... ")
         context.close()
 
 if __name__ == "__main__":
