@@ -62,11 +62,6 @@ def extract_links(article):
             href = None
 
         try:
-            title = link.get_attribute("title")
-        except Exception:
-            title = None
-
-        try:
             aria_label = link.get_attribute("aria-label")
         except Exception:
             aria_label = None
@@ -74,16 +69,14 @@ def extract_links(article):
         if (
             re.fullmatch(r"\d+[smhdwy]", link_text)
             or "facebook.com" in (href or "")
-            or title
             or aria_label
         ):
             link_info.append({
                 "text": link_text,
                 "href": href,
-                "title": title,
                 "aria_label": aria_label,
             })
-            
+
     return link_info
 
 # def extract_metadata():
