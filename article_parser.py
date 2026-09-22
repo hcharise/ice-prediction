@@ -1,9 +1,33 @@
 import re
 from urllib.parse import urlparse, parse_qs
 
+def extract_posts(articles):
 
-# come back to this once comments is working!!
-# def extract_posts():
+    posts = []
+    
+    for i in range(articles.count()):
+        article = articles.nth(i)
+
+        try:
+            text = article.inner_text(timeout=3000).strip()
+        except Exception:
+            continue
+
+        if not text:
+            continue
+
+        # link_info = extract_links(article)
+        # metadata = extract_metadata(link_info)
+
+        posts.append({
+            "type": "post", # metadata["type"],
+            "timestamp": None, # metadata["timestamp"],
+            "post_url": None, # metadata["post_url"],
+            "text": text,
+            "links": None # link_info
+        })
+
+    return posts
 
 def extract_comments(articles):
     comments = []

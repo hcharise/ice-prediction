@@ -1,7 +1,7 @@
 from playwright.sync_api import sync_playwright
 import json
 import time
-from article_parser import extract_comments
+from article_parser import extract_comments, extract_posts
 
 
 PAGE_URL = "https://www.facebook.com/COIceconditions" # facebook URL to retrieve posts from
@@ -53,126 +53,15 @@ def main():
 
             # EXTRACT POSTS ---------------------------------------------------------------------------
 
+            # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
+            
             message_elements = page.locator(
                 '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
             )
 
-            print(f"Found {message_elements.count()} possible post message elements")
+            print(f"Found {message_elements.count()} post elements")
 
-            for j in range(message_elements.count()):
-                message = message_elements.nth(j)
-
-                try:
-                    message_text = message.inner_text(timeout=3000).strip()
-                except Exception:
-                    continue
-
-                links = message.locator("a")
-                link_info = []
-
-                for j in range(min(links.count(), 25)):
-                    link = links.nth(j)
-
-                    try:
-                        link_text = link.inner_text(timeout=1000).strip()
-                    except Exception:
-                        link_text = ""
-
-                    try:
-                        href = link.get_attribute("href")
-                    except Exception:
-                        href = None
-
-                    try:
-                        title = link.get_attribute("title")
-                    except Exception:
-                        title = None
-
-                    try:
-                        aria_label = link.get_attribute("aria-label")
-                    except Exception:
-                        aria_label = None
-
-                    # Keep links that look potentially useful:
-                    # timestamps, permalinks, comments, etc.
-                    if (
-                        re.fullmatch(r"\d+[smhdwy]", link_text)
-                        or "facebook.com" in (href or "")
-                        or title
-                        or aria_label
-                    ):
-                        link_info.append({
-                            "text": link_text,
-                            "href": href,
-                            "title": title,
-                            "aria_label": aria_label,
-                        })
-
-                metadata = {
-                    "type": "post",
-                    "timestamp": None,
-                    "post_url": None,
-                    "comment_id": None,
-                    "reply_comment_id": None,
-                }
-
-                # REPLACING THIS W/ JSON ******************
-                print("\nPOSSIBLE POST MESSAGE:")
-                print(message_text[:500])
-                print("-" * 50)
-
-                for link in link_info:
-                    href = link.get("href") or ""
-
-                    if "/COIceconditions/posts/" not in href:
-                        continue
-
-                    parsed = urlparse(href)
-                    params = parse_qs(parsed.query)
-
-                    print(params)
-
-                    clean_post_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
-
-                    if "reply_comment_id" in params:
-                        metadata = {
-                            "type": "reply",
-                            "timestamp": link.get("aria_label"),
-                            "post_url": clean_post_url,
-                            "comment_id": params.get("comment_id", [None])[0],
-                            "reply_comment_id": params.get("reply_comment_id", [None])[0],
-                        }
-                        break
-
-                    elif "comment_id" in params:
-                        metadata = {
-                            "type": "comment",
-                            "timestamp": link.get("aria_label"),
-                            "post_url": clean_post_url,
-                            "comment_id": params.get("comment_id", [None])[0],
-                            "reply_comment_id": None,
-                        }
-                        break
-
-                    else:
-                        metadata = {
-                            "type": "post",
-                            "timestamp": link.get("aria_label"),
-                            "post_url": clean_post_url,
-                            "comment_id": None,
-                            "reply_comment_id": None,
-                        }
-                        break
-
-                posts.append({
-                    "index": i,
-                    "type": metadata["type"],
-                    "timestamp": metadata["timestamp"],
-                    "post_url": metadata["post_url"],
-                    "text": message_text,
-                    "links": link_info
-                })
-
+            posts = extract_posts(message_elements)
 
             # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
 
