@@ -5,14 +5,15 @@ from urllib.parse import urlparse, parse_qs
 import re
 
 
-PAGE_URL = "https://www.facebook.com/COIceconditions"
-PROFILE_DIR = "./facebook_playwright_profile"
+PAGE_URL = "https://www.facebook.com/COIceconditions" # facebook URL to retrieve posts from
+PROFILE_DIR = "./facebook_playwright_profile" # save facebook credentials
+SCROLL_COUNT = 5 # number of times script will scroll down on facebook page
 
 
 def main():
     with sync_playwright() as p:
 
-        # LOAD PAGE
+        # LOAD PAGE -----------------------------------------------------------------------------------
 
         context = p.chromium.launch_persistent_context(
             PROFILE_DIR,
@@ -29,7 +30,7 @@ def main():
             timeout=60_000
         )
 
-        # LOG IN
+        # LOG IN --------------------------------------------------------------------------------------
 
         print(
             "\nIf Facebook asks you to log in, log in manually in the browser.\n"
@@ -38,18 +39,18 @@ def main():
 
         input("Press ENTER after the page is fully visible... ")
 
-        # SCROLL & SAVE POSTS/COMMENTS/REPLIES
+        # SCROLL & SAVE POSTS/COMMENTS/REPLIES --------------------------------------------------------
 
-        items = [] # main posts
-        posts = [] # comments & replies
+        items = [] # stores main posts
+        posts = [] # stores comments & replies
 
         # Scroll to load more posts
-        for i in range(20):
-            print(f"Scroll {i + 1}/20")
+        for i in range(SCROLL_COUNT):
+            print(f"Scroll {i + 1}/{SCROLL_COUNT}")
             page.mouse.wheel(0, 1800)
             time.sleep(3)
 
-            # EXTRACT POSTS
+            # EXTRACT POSTS ---------------------------------------------------------------------------
 
             message_elements = page.locator(
                 '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
@@ -89,7 +90,7 @@ def main():
                 })
 
 
-            # EXTRACT COMMENTS & REPLIES
+            # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
 
             articles = page.locator('[role="article"]')
 
@@ -205,9 +206,9 @@ def main():
                     "links": link_info,
                 })
 
-        # END OF SCROLL LOOPS
+        # END OF SCROLL LOOPS -------------------------------------------------------------------------
 
-        # SAVE FOUND TEXT TO JSON
+        # SAVE FOUND TEXT TO JSON ---------------------------------------------------------------------
         with open("facebook_posts.json", "w", encoding="utf-8") as f:
                     json.dump(posts, f, indent=2, ensure_ascii=False)
 
@@ -218,7 +219,7 @@ def main():
 
         print(f"Saved {len(items)} comments & replies for inspection")
 
-        # CLOSE BROWSER
+        # CLOSE BROWSER -------------------------------------------------------------------------------
         input("Press ENTER to close the browser... ")
         context.close()
 
