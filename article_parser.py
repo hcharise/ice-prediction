@@ -25,17 +25,18 @@ def extract_posts(articles):
             "type": metadata["type"],
             "timestamp": metadata["timestamp"],
             "post_url": metadata["post_url"],
+            "comment_id": metadata["comment_id"],
+            "reply_comment_id": metadata["reply_comment_id"],
             "text": text,
-            "links": None # link_info
+            "links": link_info
         })
 
     return posts
 
-
+# ideally only need one extract links method
 def extract_post_links(article):
 
-    print("ARTICLE TEXT: ", article.inner_text()[:200])
-
+    ## need to clean this up - how to make less strict than "4 levels up exactly"
     parent = article.locator("xpath=..")
     gparent = parent.locator("xpath=..")
     ggp = gparent.locator("xpath=..")
@@ -68,39 +69,6 @@ def extract_post_links(article):
         print("text:", link_text)
         print("href:", href)
         print("aria-label:", aria_label)
-
-        """
-        links = article.locator("a")
-        link_info = []
-
-
-        for i in range(min(links.count(), 25)):
-            link = links.nth(i)
-
-            try:
-                link_text = link.inner_text(timeout=1000).strip()
-                print("succeeded 1")
-            except Exception:
-                print("failed 1")
-
-                link_text = ""
-
-            try:
-                href = link.get_attribute("href")
-                print("succeeded 2")
-
-            except Exception:
-                href = None
-                print("failed 2")
-
-
-            try:
-                aria_label = link.get_attribute("aria-label")
-                print("succeeded 3")
-            except Exception:
-                aria_label = None
-                print("failed 3")
-        """
 
         if (
             re.fullmatch(r"\d+[smhdwy]", link_text)
