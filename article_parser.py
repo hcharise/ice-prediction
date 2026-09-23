@@ -16,18 +16,83 @@ def extract_posts(articles):
         if not text:
             continue
 
-        # link_info = extract_links(article)
-        # metadata = extract_metadata(link_info)
+        # try to get this part working!!!
+        link_info = extract_post_links(article)
+        print(link_info)
+        metadata = extract_metadata(link_info)
 
         posts.append({
-            "type": "post", # metadata["type"],
-            "timestamp": None, # metadata["timestamp"],
-            "post_url": None, # metadata["post_url"],
+            "type": metadata["type"],
+            "timestamp": metadata["timestamp"],
+            "post_url": metadata["post_url"],
             "text": text,
             "links": None # link_info
         })
 
     return posts
+
+
+def extract_post_links(article):
+
+    print("ARTICLE TEXT: ", article.inner_text()[:200])
+
+    parent = article.locator("xpath=..")
+    gparent = parent.locator("xpath=..")
+    ggp = gparent.locator("xpath=..")
+    gggp = ggp.locator("xpath=..")
+    print("gggp: ", gggp.evaluate("el => el.outerHTML")[:2000])
+    print("gggp links:", gggp.locator("a").count())
+
+
+    links = article.locator("a")
+    link_info = []
+
+
+    for i in range(min(links.count(), 25)):
+        link = links.nth(i)
+
+        try:
+            link_text = link.inner_text(timeout=1000).strip()
+            print("succeeded 1")
+        except Exception:
+            print("failed 1")
+
+            link_text = ""
+
+        try:
+            href = link.get_attribute("href")
+            print("succeeded 2")
+
+        except Exception:
+            href = None
+            print("failed 2")
+
+
+        try:
+            aria_label = link.get_attribute("aria-label")
+            print("succeeded 3")
+        except Exception:
+            aria_label = None
+            print("failed 3")
+
+
+        if (
+            re.fullmatch(r"\d+[smhdwy]", link_text)
+            or "facebook.com" in (href or "")
+            or aria_label
+        ):
+            link_info.append({
+                "text": link_text,
+                "href": href,
+                "aria_label": aria_label,
+            })
+
+        print("succeeded 4")
+    
+    return link_info
+
+
+
 
 def extract_comments(articles):
     comments = []
@@ -58,7 +123,6 @@ def extract_comments(articles):
 
     return comments
 
-
 def extract_links(article):
 
     links = article.locator("a")
@@ -82,6 +146,7 @@ def extract_links(article):
         except Exception:
             aria_label = None
 
+
         if (
             re.fullmatch(r"\d+[smhdwy]", link_text)
             or "facebook.com" in (href or "")
@@ -92,7 +157,7 @@ def extract_links(article):
                 "href": href,
                 "aria_label": aria_label,
             })
-
+    
     return link_info
 
 def extract_metadata(link_info):

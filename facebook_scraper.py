@@ -54,7 +54,7 @@ def main():
             # EXTRACT POSTS ---------------------------------------------------------------------------
 
             # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
-            
+            #should move this line to parser eventually...
             message_elements = page.locator(
                 '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
             )
@@ -64,7 +64,7 @@ def main():
             posts = extract_posts(message_elements)
 
             # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
-
+            #should move this line to parser eventually...
             articles = page.locator('[role="article"]')
 
             print(f"Found {articles.count()} article elements")
@@ -88,6 +88,7 @@ def main():
         # may want to revert to user prompting browser closing in the future
         # input("Press ENTER to close the browser... ")
         context.close()
+        print("-----------------------------------------------------------------------------------------------")
 
 if __name__ == "__main__":
     main()
