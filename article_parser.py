@@ -43,38 +43,64 @@ def extract_post_links(article):
     print("gggp: ", gggp.evaluate("el => el.outerHTML")[:2000])
     print("gggp links:", gggp.locator("a").count())
 
-
-    links = article.locator("a")
+    links = gggp.locator("a")
     link_info = []
 
-
-    for i in range(min(links.count(), 25)):
+    for i in range(links.count()):
         link = links.nth(i)
 
         try:
             link_text = link.inner_text(timeout=1000).strip()
-            print("succeeded 1")
         except Exception:
-            print("failed 1")
-
             link_text = ""
 
         try:
             href = link.get_attribute("href")
-            print("succeeded 2")
-
         except Exception:
             href = None
-            print("failed 2")
-
 
         try:
             aria_label = link.get_attribute("aria-label")
-            print("succeeded 3")
         except Exception:
             aria_label = None
-            print("failed 3")
 
+        print(f"\nLINK {i}")
+        print("text:", link_text)
+        print("href:", href)
+        print("aria-label:", aria_label)
+
+        """
+        links = article.locator("a")
+        link_info = []
+
+
+        for i in range(min(links.count(), 25)):
+            link = links.nth(i)
+
+            try:
+                link_text = link.inner_text(timeout=1000).strip()
+                print("succeeded 1")
+            except Exception:
+                print("failed 1")
+
+                link_text = ""
+
+            try:
+                href = link.get_attribute("href")
+                print("succeeded 2")
+
+            except Exception:
+                href = None
+                print("failed 2")
+
+
+            try:
+                aria_label = link.get_attribute("aria-label")
+                print("succeeded 3")
+            except Exception:
+                aria_label = None
+                print("failed 3")
+        """
 
         if (
             re.fullmatch(r"\d+[smhdwy]", link_text)
@@ -87,8 +113,6 @@ def extract_post_links(article):
                 "aria_label": aria_label,
             })
 
-        print("succeeded 4")
-    
     return link_info
 
 
