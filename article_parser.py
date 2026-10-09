@@ -9,76 +9,33 @@ def extract_posts(page, message_elements):
         message = message_elements.nth(i)
 
         print(f"\n========== POST {i} ==========")
-        print("MESSAGE:", message.inner_text()[:100])
-        
-        container = message.locator("xpath=../../../..")
 
-        header = container.locator("xpath=./*").nth(1)
+        # Get message text
+        text = message.inner_text()[:100]
+        print("TEXT:", text)
 
         # Inspect the suspected timestamp link
+        container = message.locator("xpath=../../../..")
+        header = container.locator("xpath=./*").nth(1)
         timestamp_link = header.locator("a").nth(2)
 
-        # Hover over the date
+        # Hover over the date to get tooltop
         timestamp_link.hover()
         page.wait_for_timeout(1000)
 
-        # Check for a tooltip
+        # Get timestamp from tooltip
         tooltips = page.locator('[role="tooltip"]')
-        print("TOOLTIP:", repr(tooltips.first.inner_text()))
+        timestamp = repr(tooltips.first.inner_text())
+        print("TIMESTAMP:", timestamp)
+
+        # Write post info back to posts list
+        posts.append({
+            "type": "post",
+            "timestamp": timestamp,
+            "text": text,
+        })
 
     return posts
-
-# ideally only need one extract links method
-def extract_post_links(article):
-
-    ## need to clean this up - how to make less strict than "4 levels up exactly"
-    parent = article.locator("xpath=..")
-    gparent = parent.locator("xpath=..")
-    ggp = gparent.locator("xpath=..")
-    gggp = ggp.locator("xpath=..")
-    print("gggp: ", gggp.evaluate("el => el.outerHTML")[:2000])
-    print("gggp links:", gggp.locator("a").count())
-
-    links = gggp.locator("a")
-    link_info = []
-
-    for i in range(links.count()):
-        link = links.nth(i)
-
-        try:
-            link_text = link.inner_text(timeout=1000).strip()
-        except Exception:
-            link_text = ""
-
-        try:
-            href = link.get_attribute("href")
-        except Exception:
-            href = None
-
-        try:
-            aria_label = link.get_attribute("aria-label")
-        except Exception:
-            aria_label = None
-
-        print(f"\nLINK {i}")
-        print("text:", link_text)
-        print("href:", href)
-        print("aria-label:", aria_label)
-
-        if (
-            re.fullmatch(r"\d+[smhdwy]", link_text)
-            or "facebook.com" in (href or "")
-            or aria_label
-        ):
-            link_info.append({
-                "text": link_text,
-                "href": href,
-                "aria_label": aria_label,
-            })
-
-    return link_info
-
-
 
 
 def extract_comments(articles):
