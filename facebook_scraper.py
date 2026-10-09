@@ -61,7 +61,7 @@ def main():
 
             print(f"Found {message_elements.count()} post elements")
 
-            posts = extract_posts(message_elements)
+            posts = extract_posts(page, message_elements)
 
             # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
             #should move this line to parser eventually...

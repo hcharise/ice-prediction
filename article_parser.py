@@ -1,35 +1,30 @@
 import re
 from urllib.parse import urlparse, parse_qs
 
-def extract_posts(articles):
+def extract_posts(page, message_elements):
 
     posts = []
     
-    for i in range(articles.count()):
-        article = articles.nth(i)
+    for i in range(min(message_elements.count(), 4)):
+        message = message_elements.nth(i)
 
-        try:
-            text = article.inner_text(timeout=3000).strip()
-        except Exception:
-            continue
+        print(f"\n========== POST {i} ==========")
+        print("MESSAGE:", message.inner_text()[:100])
+        
+        container = message.locator("xpath=../../../..")
 
-        if not text:
-            continue
+        header = container.locator("xpath=./*").nth(1)
 
-        # try to get this part working!!!
-        link_info = extract_post_links(article)
-        print(link_info)
-        metadata = extract_metadata(link_info)
+        # Inspect the suspected timestamp link
+        timestamp_link = header.locator("a").nth(2)
 
-        posts.append({
-            "type": metadata["type"],
-            "timestamp": metadata["timestamp"],
-            "post_url": metadata["post_url"],
-            "comment_id": metadata["comment_id"],
-            "reply_comment_id": metadata["reply_comment_id"],
-            "text": text,
-            "links": link_info
-        })
+        # Hover over the date
+        timestamp_link.hover()
+        page.wait_for_timeout(1000)
+
+        # Check for a tooltip
+        tooltips = page.locator('[role="tooltip"]')
+        print("TOOLTIP:", repr(tooltips.first.inner_text()))
 
     return posts
 
