@@ -5,14 +5,14 @@ def extract_posts(page, message_elements):
 
     posts = []
     
-    for i in range(min(message_elements.count(), 4)):
+    for i in range(message_elements.count()):
         message = message_elements.nth(i)
 
         print(f"\n========== POST {i} ==========")
 
         # Get message text
-        text = message.inner_text()[:100]
-        print("TEXT:", text)
+        text = message.inner_text().strip()
+        print("TEXT:", text[:100])
 
         # Inspect the suspected timestamp link
         container = message.locator("xpath=../../../..")
@@ -25,7 +25,7 @@ def extract_posts(page, message_elements):
 
         # Get timestamp from tooltip
         tooltips = page.locator('[role="tooltip"]')
-        timestamp = repr(tooltips.first.inner_text())
+        timestamp = tooltips.first.inner_text(timeout=3000).strip()
         print("TIMESTAMP:", timestamp)
 
         # Write post info back to posts list
