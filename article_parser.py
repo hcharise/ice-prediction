@@ -11,22 +11,31 @@ def extract_posts(page, message_elements):
         print(f"\n========== POST {i} ==========")
 
         # Get message text
-        text = message.inner_text().strip()
-        print("TEXT:", text[:100])
+        try:
+            text = message.inner_text().strip()
+            print("TEXT:", text[:100])
+        except Exception as e:
+            text = None
+            print(f"Error extracting text from post {i}: {e}")
 
-        # Inspect the suspected timestamp link
-        container = message.locator("xpath=../../../..")
-        header = container.locator("xpath=./*").nth(1)
-        timestamp_link = header.locator("a").nth(2)
+        try:
+            # Inspect the suspected timestamp link
+            container = message.locator("xpath=../../../..")
+            header = container.locator("xpath=./*").nth(1)
+            timestamp_link = header.locator("a").nth(2)
 
-        # Hover over the date to get tooltop
-        timestamp_link.hover()
-        page.wait_for_timeout(1000)
+            # Hover over the date to get tooltop
+            timestamp_link.hover()
+            page.wait_for_timeout(1000)
 
-        # Get timestamp from tooltip
-        tooltips = page.locator('[role="tooltip"]')
-        timestamp = tooltips.first.inner_text(timeout=3000).strip()
-        print("TIMESTAMP:", timestamp)
+            # Get timestamp from tooltip
+            tooltips = page.locator('[role="tooltip"]')
+            timestamp = tooltips.first.inner_text(timeout=1000).strip()
+            print("TIMESTAMP:", timestamp)
+            # could add a layer of validation here - is what we got actually a date/time?
+        except Exception as e:
+            timestamp = None
+            print(f"Error extracting timestamp from post {i}: {e}")
 
         # Write post info back to posts list
         posts.append({
@@ -45,7 +54,7 @@ def extract_comments(articles):
         article = articles.nth(i)
 
         try:
-            text = article.inner_text(timeout=3000).strip()
+            text = article.inner_text(timeout=1000).strip()
         except Exception:
             continue
 

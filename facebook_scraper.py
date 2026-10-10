@@ -26,7 +26,7 @@ def main():
         page.goto(
             PAGE_URL,
             wait_until="domcontentloaded",
-            timeout=60_000
+            timeout=6000
         )
 
         # LOG IN --------------------------------------------------------------------------------------
@@ -54,7 +54,7 @@ def main():
             # EXTRACT POSTS ---------------------------------------------------------------------------
 
             # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
-            #should move this line to parser eventually...
+            # should move this line to parser eventually...
             message_elements = page.locator(
                 '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
             )
@@ -64,7 +64,7 @@ def main():
             posts = extract_posts(page, message_elements)
 
             # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
-            #should move this line to parser eventually...
+            # should move this line to parser eventually...
             articles = page.locator('[role="article"]')
 
             print(f"Found {articles.count()} article elements")
