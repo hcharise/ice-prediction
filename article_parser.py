@@ -33,7 +33,7 @@ def extract_posts(page, message_elements):
             timestamp = tooltips.first.inner_text(timeout=1000).strip()
             print("TIMESTAMP:", timestamp)
             # could add a layer of validation here - is what we got actually a date/time?
-        except Exception as e:
+        except Exception as e: # eventually add specific error handling - playwright timeout?
             timestamp = None
             print(f"Error extracting timestamp from post {i}: {e}")
 
