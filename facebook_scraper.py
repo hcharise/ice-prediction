@@ -51,25 +51,9 @@ def main():
             page.mouse.wheel(0, 1800)
             time.sleep(3)
 
-            # EXTRACT POSTS ---------------------------------------------------------------------------
-
-            # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
-            # should move this line to parser eventually...
-            message_elements = page.locator(
-                '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
-            )
-
-            print(f"Found {message_elements.count()} post elements")
-
-            posts = extract_posts(page, message_elements)
-
-            # EXTRACT COMMENTS & REPLIES --------------------------------------------------------------
-            # should move this line to parser eventually...
-            articles = page.locator('[role="article"]')
-
-            print(f"Found {articles.count()} article elements")
-
-            comments = extract_comments(articles)
+            # EXTRACT POSTS & COMMENTS/REPLIES --------------------------------------------------------  
+            posts = extract_posts(page)
+            comments = extract_comments(page)
 
         # END OF SCROLL LOOPS -------------------------------------------------------------------------
 

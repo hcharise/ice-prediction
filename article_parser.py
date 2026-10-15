@@ -1,9 +1,15 @@
 import re
 from urllib.parse import urlparse, parse_qs
 
-def extract_posts(page, message_elements):
+def extract_posts(page):
 
     posts = []
+
+    # Identify message elements ie post elements
+    message_elements = page.locator(
+        '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+    )
+    print(f"Found {message_elements.count()} post elements")
     
     for i in range(message_elements.count()):
         message = message_elements.nth(i)
@@ -14,6 +20,7 @@ def extract_posts(page, message_elements):
         try:
             text = message.inner_text().strip()
 
+            # Identify posts that are cut off, ie have a "See more"
             if "See more" in text:
                 print("FOUND A SEE MORE")
 
@@ -59,9 +66,13 @@ def extract_posts(page, message_elements):
     return posts
 
 
-def extract_comments(articles):
+def extract_comments(page):
     comments = []
 
+    # Identify article elements ie comments and replies
+    articles = page.locator('[role="article"]')
+    print(f"Found {articles.count()} article elements")
+    
     for i in range(articles.count()):
         article = articles.nth(i)
 
