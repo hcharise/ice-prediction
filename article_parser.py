@@ -13,7 +13,19 @@ def extract_posts(page, message_elements):
         # Get message text
         try:
             text = message.inner_text().strip()
-            print("TEXT:", text[:100])
+
+            if "See more" in text:
+                print("FOUND A SEE MORE")
+
+            # Find timestamp link
+            container = message.locator("xpath=../../../..")
+            header = container.locator("xpath=./*").nth(1)
+            timestamp_link = header.locator("a").nth(2)
+
+            # Hover over the date to get tooltop
+            timestamp_link.hover()
+            print("TEXT:", text[:500])
+
         except Exception as e:
             text = None
             print(f"Error extracting text from post {i}: {e}")
