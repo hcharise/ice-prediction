@@ -3,7 +3,7 @@ from urllib.parse import urlparse, parse_qs
 
 def extract_posts(page):
     SCROLL_MAX = 10 # max scrolls if no new posts are found
-    POSTS_MAX = 20 # maximum number of posts to be retrieved (what ultimately ends the looping)
+    POSTS_MAX = 10 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
     processed_keys = set() # stores keys from posts already processed to avoid duplication
     scroll_attempts = 0
@@ -68,24 +68,7 @@ def extract_posts(page):
                 print(f"Error extracting text from post {j}: {e}")
 
             # GET POST TIMESTAMP --------------------------------------------------------------------------
-            try:
-                # Locate timestamp link
-                container = next_message.locator("xpath=../../../..")
-                header = container.locator("xpath=./*").nth(1)
-                timestamp_link = header.locator("a").nth(2)
-
-                # Hover over the timestamp link to get tooltop
-                timestamp_link.hover(timeout=3000)
-                page.wait_for_timeout(1000)
-
-                # Get timestamp from tooltip
-                tooltips = page.locator('[role="tooltip"]')
-                timestamp = tooltips.first.inner_text(timeout=1000).strip()
-                # could add a layer of validation here - is what we got actually a date/time?
-
-            except Exception as e: # eventually add specific error handling - playwright timeout?
-                timestamp = None
-                print(f"Error extracting timestamp from post {j}: {e}")
+            timestamp = extract_post_timestamp(page, next_message)
 
             # Write post info back to posts list
             posts.append({
@@ -106,6 +89,28 @@ def extract_posts(page):
 
     return posts
 
+
+def extract_post_timestamp(page, message):
+    try:
+        # Locate timestamp link
+        container = message.locator("xpath=../../../..")
+        header = container.locator("xpath=./*").nth(1)
+        timestamp_link = header.locator("a").nth(2)
+
+        # Hover over the timestamp link to get tooltop
+        timestamp_link.hover(timeout=3000)
+        page.wait_for_timeout(1000)
+
+        # Get timestamp from tooltip
+        tooltips = page.locator('[role="tooltip"]')
+        timestamp = tooltips.first.inner_text(timeout=1000).strip()
+        # could add a layer of validation here - is what we got actually a date/time?
+
+    except Exception as e: # eventually add specific error handling - playwright timeout?
+        timestamp = None
+        print(f"Error extracting timestamp from post {j}: {e}")
+
+    return timestamp
 
 def extract_comments(page):
     comments = []
