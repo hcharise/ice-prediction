@@ -3,7 +3,6 @@ import json
 import time
 from article_parser import extract_comments, extract_posts
 
-
 PAGE_URL = "https://www.facebook.com/COIceconditions" # facebook URL to retrieve posts from
 PROFILE_DIR = "./facebook_playwright_profile" # save facebook credentials
 SCROLL_COUNT = 1 # number of times script will scroll down on facebook page
@@ -12,8 +11,7 @@ SCROLL_COUNT = 1 # number of times script will scroll down on facebook page
 def main():
     with sync_playwright() as p:
 
-        # LOAD PAGE -----------------------------------------------------------------------------------
-
+        # LOAD PAGE ---------------------------------------------------------------------------------------
         context = p.chromium.launch_persistent_context(
             PROFILE_DIR,
             headless=False,
@@ -29,29 +27,23 @@ def main():
             timeout=6000
         )
 
-        # LOG IN --------------------------------------------------------------------------------------
-
+        # Log into Facebook
         print(
             "\nIf Facebook asks you to log in, log in manually in the browser.\n"
             "Once you can see the Colorado Ice Conditions page, return here."
         )
-
         # may want to return to using input instead of sleep to verify loading?
         # input("Press ENTER after the page is fully visible... ")
         time.sleep(5)
 
-        # SCROLL & SAVE POSTS/COMMENTS/REPLIES --------------------------------------------------------
-
+        # EXTRACT POSTS & COMMENTS/REPLIES ----------------------------------------------------------------
         posts = [] # stores main posts
-        comments = [] # stores comments & replies
-
-        # EXTRACT POSTS & COMMENTS/REPLIES --------------------------------------------------------  
         posts = extract_posts(page)
+
+        comments = [] # stores comments & replies
         comments = extract_comments(page)
 
-        # END OF SCROLL LOOPS -------------------------------------------------------------------------
-
-        # SAVE FOUND TEXT TO JSON ---------------------------------------------------------------------
+        # Save found posts/comments/replies to JSON
         with open("facebook_posts.json", "w", encoding="utf-8") as f:
                     json.dump(posts, f, indent=2, ensure_ascii=False)
 
@@ -62,7 +54,7 @@ def main():
 
         print(f"Saved {len(comments)} comments & replies for inspection")
 
-        # CLOSE BROWSER -------------------------------------------------------------------------------
+        # CLOSE BROWSER -----------------------------------------------------------------------------------
         # may want to revert to user prompting browser closing in the future
         # input("Press ENTER to close the browser... ")
         context.close()
