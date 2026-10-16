@@ -44,28 +44,7 @@ def extract_posts(page):
             processed_keys.add(next_key)
 
             # GET POST TEXT -------------------------------------------------------------------------------
-            try:
-                # Extract visible text from post
-                text = next_message.inner_text(timeout=3000).strip()
-
-                # Check if post has additional text, ie has a "See more" button
-                if "See more" in text:
-                    try:
-                        # Click "See more" button to expand text
-                        next_message.get_by_role("button", name="See more").click(timeout=3000)
-
-                        # Find the same post again (its index may have changed after expanding)
-                        next_message = message_elements.filter(has_text=next_key).first
-
-                        # Re-extract full text
-                        text = next_message.inner_text(timeout=3000).strip()
-                        
-                    except Exception as e:
-                        print(f"Error expanding additional text from post {j}: {e}")
-
-            except Exception as e:
-                text = None
-                print(f"Error extracting text from post {j}: {e}")
+            text = extract_post_text(message_elements, next_message, next_key)
 
             # GET POST TIMESTAMP --------------------------------------------------------------------------
             timestamp = extract_post_timestamp(page, next_message)
@@ -89,6 +68,31 @@ def extract_posts(page):
 
     return posts
 
+def extract_post_text(message_elements, message, key):
+    try:
+        # Extract visible text from post
+        text = message.inner_text(timeout=3000).strip()
+
+        # Check if post has additional text, ie has a "See more" button
+        if "See more" in text:
+            try:
+                # Click "See more" button to expand text
+                message.get_by_role("button", name="See more").click(timeout=3000)
+
+                # Relocate the same post again (its index may have changed after expanding)
+                message = message_elements.filter(has_text=key).first
+
+                # Re-extract full text
+                text = message.inner_text(timeout=3000).strip()
+                
+            except Exception as e:
+                print(f"Error expanding additional text from post: {e}")
+
+    except Exception as e:
+        text = None
+        print(f"Error extracting text from post: {e}")
+
+    return text
 
 def extract_post_timestamp(page, message):
     try:
