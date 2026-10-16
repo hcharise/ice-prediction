@@ -45,25 +45,9 @@ def main():
         posts = [] # stores main posts
         comments = [] # stores comments & replies
 
-        # Scroll to load more posts
-        # I THINK THIS IS NOT NECESSARY IF SCROLLING WILL HAPPEN AFTER EXPANDING EACH POST? but what about posts that don't expand...?
-        for i in range(SCROLL_COUNT):
-            print(f"Scroll {i + 1}/{SCROLL_COUNT}")
-            page.mouse.wheel(0, 1800)
-            time.sleep(3)
-
-            '''
-            # Expand any posts with additional text, ie "See more"
-            try:
-                page.get_by_role("button", name="See more").click()
-                print(f"Expanded a see more in scroll {i}")
-            except Exception as e:
-                print(f"Was not able to expand a see more on the PAGE - {e}")
-            '''
-
-            # EXTRACT POSTS & COMMENTS/REPLIES --------------------------------------------------------  
-            posts = extract_posts(page)
-            comments = extract_comments(page)
+        # EXTRACT POSTS & COMMENTS/REPLIES --------------------------------------------------------  
+        posts = extract_posts(page)
+        comments = extract_comments(page)
 
         # END OF SCROLL LOOPS -------------------------------------------------------------------------
 
