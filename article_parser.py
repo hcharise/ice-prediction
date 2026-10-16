@@ -2,74 +2,73 @@ import re
 from urllib.parse import urlparse, parse_qs
 
 def extract_posts(page):
-
+    SCROLL_MAX = 10 # max scrolls if no new posts are found
+    POSTS_MAX = 20 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
-    processed_keys = set()
-    SCROLL_MAX = 10
-
-    # Identify message elements ie post elements
+    processed_keys = set() # stores keys from posts already processed to avoid duplication
+    scroll_attempts = 0
+    
+    # Identify initial set of message elements ie post elements
     message_elements = page.locator(
         '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
     )
 
-    scroll_attempts = 0
-    while scroll_attempts < SCROLL_MAX and len(posts) < 20: # make more elegant to prevent forever scrolling
+    # Scroll through posts, extracting text and date from each
+    while scroll_attempts < SCROLL_MAX and len(posts) < POSTS_MAX:
 
-        # Find an unprocessed post in the current DOM
+        # LOCATE NEXT POST --------------------------------------------------------------------------------
         next_message = None
         next_key = None
 
+        # Search through message_elements currently in DOM, locating next one that has not been processed
         for j in range(message_elements.count()):
             try:
+                # Get key from next message_element candidate
                 candidate = message_elements.nth(j)
                 candidate_text = candidate.inner_text(timeout=1000).strip()
                 candidate_key = candidate_text[:100]
 
+                # If next message_element candidate is new, exit search to extract post
                 if candidate_key not in processed_keys:
                     next_message = candidate
                     next_key = candidate_key
                     break
 
             except Exception as e:
-                print(f"Could not inspect candidate {j}: {e}")
+                print(f"Error inspecting candidate {j}: {e}")
 
+        # EXTRACT POST TEXT & TIMESTAMP -------------------------------------------------------------------
         if next_message is not None:
-            print(f"\nFound unprocessed post: {next_key[:60]}")
 
-            # Mark it as processed before changing the DOM
+            # Mark message as processed before changing the DOM when expanding
             processed_keys.add(next_key)
 
-            print(f"\n========== POST {j} ==========")
-
-            # GET POST TEXT
+            # GET POST TEXT -------------------------------------------------------------------------------
             try:
+                # Extract visible text from post
                 text = next_message.inner_text(timeout=3000).strip()
 
-                # Identify posts that are cut off, ie have a "See more"
+                # Check if post has additional text, ie has a "See more" button
                 if "See more" in text:
-                    print(f"Expanding post {j}... Currently, it's {len(text)} characters.")
-                    print({text})
                     try:
                         next_message.get_by_role("button", name="See more").click(timeout=3000)
                         text = next_message.inner_text(timeout=3000).strip()
-                        print(f"Expanded post {j}. Now {len(text)} characters.")
                         
                     except Exception as e:
-                        print(f"Was not able to expand a see more in MESSAGE - {e}")
-                        continue
+                        print(f"Error expanding additional text from post {j}: {e}")
 
             except Exception as e:
                 text = None
                 print(f"Error extracting text from post {j}: {e}")
 
-            # GET POST TIMESTAMP
+            # GET POST TIMESTAMP --------------------------------------------------------------------------
             try:
-                # Inspect the suspected timestamp link
+                # Locate timestamp link
                 container = next_message.locator("xpath=../../../..")
                 header = container.locator("xpath=./*").nth(1)
                 timestamp_link = header.locator("a").nth(2)
 
-                # Hover over the date to get tooltop
+                # Hover over the timestamp link to get tooltop
                 timestamp_link.hover(timeout=3000)
                 page.wait_for_timeout(1000)
 
@@ -77,6 +76,7 @@ def extract_posts(page):
                 tooltips = page.locator('[role="tooltip"]')
                 timestamp = tooltips.first.inner_text(timeout=1000).strip()
                 # could add a layer of validation here - is what we got actually a date/time?
+
             except Exception as e: # eventually add specific error handling - playwright timeout?
                 timestamp = None
                 print(f"Error extracting timestamp from post {j}: {e}")
@@ -88,13 +88,15 @@ def extract_posts(page):
                 "text": text,
             })
 
+            # Reset scrolls to 0 to find new next post
             scroll_attempts = 0
+
         else:
+            # Scroll down on page before repeating loop to see if new message_elements can be found
             page.mouse.wheel(0, 500)
             page.wait_for_timeout(500)
 
             scroll_attempts += 1
-            print(f"Scroll attempt {scroll_attempts}/{SCROLL_MAX}")
 
     return posts
 
