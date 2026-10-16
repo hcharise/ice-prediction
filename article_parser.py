@@ -51,7 +51,13 @@ def extract_posts(page):
                 # Check if post has additional text, ie has a "See more" button
                 if "See more" in text:
                     try:
+                        # Click "See more" button to expand text
                         next_message.get_by_role("button", name="See more").click(timeout=3000)
+
+                        # Find the same post again (its index may have changed after expanding)
+                        next_message = message_elements.filter(has_text=next_key).first
+
+                        # Re-extract full text
                         text = next_message.inner_text(timeout=3000).strip()
                         
                     except Exception as e:
