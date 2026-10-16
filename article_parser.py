@@ -4,64 +4,97 @@ from urllib.parse import urlparse, parse_qs
 def extract_posts(page):
 
     posts = []
+    processed_keys = set()
+    SCROLL_MAX = 10
 
     # Identify message elements ie post elements
     message_elements = page.locator(
         '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
     )
-    print(f"Found {message_elements.count()} post elements")
-    
-    for i in range(message_elements.count()):
-        message = message_elements.nth(i)
 
-        print(f"\n========== POST {i} ==========")
+    scroll_attempts = 0
+    while scroll_attempts < SCROLL_MAX and len(posts) < 20: # make more elegant to prevent forever scrolling
 
-        # Get message text
-        try:
-            text = message.inner_text().strip()
+        # Find an unprocessed post in the current DOM
+        next_message = None
+        next_key = None
 
-            # Identify posts that are cut off, ie have a "See more"
-            if "See more" in text:
-                print("FOUND A SEE MORE")
+        for j in range(message_elements.count()):
+            try:
+                candidate = message_elements.nth(j)
+                candidate_text = candidate.inner_text(timeout=1000).strip()
+                candidate_key = candidate_text[:100]
 
-            # Find timestamp link
-            container = message.locator("xpath=../../../..")
-            header = container.locator("xpath=./*").nth(1)
-            timestamp_link = header.locator("a").nth(2)
+                if candidate_key not in processed_keys:
+                    next_message = candidate
+                    next_key = candidate_key
+                    break
 
-            # Hover over the date to get tooltop
-            timestamp_link.hover()
-            print("TEXT:", text[:500])
+            except Exception as e:
+                print(f"Could not inspect candidate {j}: {e}")
 
-        except Exception as e:
-            text = None
-            print(f"Error extracting text from post {i}: {e}")
+        if next_message is not None:
+            print(f"\nFound unprocessed post: {next_key[:60]}")
 
-        try:
-            # Inspect the suspected timestamp link
-            container = message.locator("xpath=../../../..")
-            header = container.locator("xpath=./*").nth(1)
-            timestamp_link = header.locator("a").nth(2)
+            # Mark it as processed before changing the DOM
+            processed_keys.add(next_key)
 
-            # Hover over the date to get tooltop
-            timestamp_link.hover()
-            page.wait_for_timeout(1000)
+            print(f"\n========== POST {j} ==========")
 
-            # Get timestamp from tooltip
-            tooltips = page.locator('[role="tooltip"]')
-            timestamp = tooltips.first.inner_text(timeout=1000).strip()
-            print("TIMESTAMP:", timestamp)
-            # could add a layer of validation here - is what we got actually a date/time?
-        except Exception as e: # eventually add specific error handling - playwright timeout?
-            timestamp = None
-            print(f"Error extracting timestamp from post {i}: {e}")
+            # GET POST TEXT
+            try:
+                text = next_message.inner_text(timeout=3000).strip()
 
-        # Write post info back to posts list
-        posts.append({
-            "type": "post",
-            "timestamp": timestamp,
-            "text": text,
-        })
+                # Identify posts that are cut off, ie have a "See more"
+                if "See more" in text:
+                    print(f"Expanding post {j}... Currently, it's {len(text)} characters.")
+                    print({text})
+                    try:
+                        next_message.get_by_role("button", name="See more").click(timeout=3000)
+                        text = next_message.inner_text(timeout=3000).strip()
+                        print(f"Expanded post {j}. Now {len(text)} characters.")
+                        
+                    except Exception as e:
+                        print(f"Was not able to expand a see more in MESSAGE - {e}")
+                        continue
+
+            except Exception as e:
+                text = None
+                print(f"Error extracting text from post {j}: {e}")
+
+            # GET POST TIMESTAMP
+            try:
+                # Inspect the suspected timestamp link
+                container = next_message.locator("xpath=../../../..")
+                header = container.locator("xpath=./*").nth(1)
+                timestamp_link = header.locator("a").nth(2)
+
+                # Hover over the date to get tooltop
+                timestamp_link.hover(timeout=3000)
+                page.wait_for_timeout(1000)
+
+                # Get timestamp from tooltip
+                tooltips = page.locator('[role="tooltip"]')
+                timestamp = tooltips.first.inner_text(timeout=1000).strip()
+                # could add a layer of validation here - is what we got actually a date/time?
+            except Exception as e: # eventually add specific error handling - playwright timeout?
+                timestamp = None
+                print(f"Error extracting timestamp from post {j}: {e}")
+
+            # Write post info back to posts list
+            posts.append({
+                "type": "post",
+                "timestamp": timestamp,
+                "text": text,
+            })
+
+            scroll_attempts = 0
+        else:
+            page.mouse.wheel(0, 500)
+            page.wait_for_timeout(500)
+
+            scroll_attempts += 1
+            print(f"Scroll attempt {scroll_attempts}/{SCROLL_MAX}")
 
     return posts
 
@@ -72,7 +105,8 @@ def extract_comments(page):
     # Identify article elements ie comments and replies
     articles = page.locator('[role="article"]')
     print(f"Found {articles.count()} article elements")
-    
+
+    # Try extracting text and timestamp from each article
     for i in range(articles.count()):
         article = articles.nth(i)
 
