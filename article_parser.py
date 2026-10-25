@@ -1,5 +1,7 @@
 import re
 from urllib.parse import urlparse, parse_qs
+import time
+
 
 def extract_posts(page):
     SCROLL_MAX = 10 # max scrolls if no new posts are found
@@ -50,6 +52,27 @@ def extract_posts(page):
                 container_text = candidate_container.inner_text(timeout=3000).strip()
                 if "View more comments" in container_text:
                     print(f"Found option to expand comments with ../../../..!")
+                     ## COPY
+                    try:
+                        # Click "View more comments" button to show additional comments
+                        candidate_container.get_by_role("button", name="View more comments").click(timeout=3000)
+                        # need to close post
+                        print("Opened a post!")
+                        time.sleep(1)
+                        page.press("body", "Escape")
+        
+                        # Relocate the same post again (its index may have changed after expanding)
+                        # not sure about this...
+                        next_message = message_elements.filter(has_text=next_key).first
+
+                        # don't need this here noooooww, but probably want to add it back in and remove from other spot?
+                        # Re-extract full text
+                        # text = message.inner_text(timeout=3000).strip()
+                        
+                    except Exception as e:
+                        print(f"Error expanding additional comments from post: {e}")
+        
+                    ## COPY END
                 else:
                     print(f"No 'view more comments' found in ../../../.. from this message's container:\n {candidate_key}")
 
@@ -88,6 +111,7 @@ def extract_post_text(message_elements, message, key):
         # Extract visible text from post
         text = message.inner_text(timeout=3000).strip()
 
+        '''
         # Check if post has additional text, ie has a "See more" button
         if "See more" in text:
             try:
@@ -102,6 +126,7 @@ def extract_post_text(message_elements, message, key):
                 
             except Exception as e:
                 print(f"Error expanding additional text from post: {e}")
+        '''
 
     except Exception as e:
         text = None
