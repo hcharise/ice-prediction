@@ -67,8 +67,9 @@ def extract_posts(page):
                         print(f" Extracted: {text}")
                         # NEW ^^
 
+                        # can delete later, just helpful for seeing that playwright is expanding
                         time.sleep(1)
-                        page.press("body", "Escape")
+                        dialog.get_by_role("button", name="Close").click(timeout=3000)
         
                         # Relocate the same post again (its index may have changed after expanding)
                         # not sure about this...
