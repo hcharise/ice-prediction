@@ -63,11 +63,61 @@ def extract_posts(page):
                         )
                         text = dialog_message.inner_text(timeout=3000).strip()
 
+                        # get timestamp
+                        try:
+                            # Locate timestamp link
+                            dialog_container = dialog_message.locator("xpath=../../../..")
+                            header = dialog_container.locator("xpath=./*").nth(1)
+                            timestamp_link = header.locator("a").nth(2)
+
+                            #TESTING
+                            page.mouse.move(0, 0)
+                            page.wait_for_timeout(200)
+
+                            print("\n--- TIMESTAMP LINK DEBUG ---")
+                            print("Number of header links:", header.locator("a").count())
+
+                            for i in range(header.locator("a").count()):
+                                link = header.locator("a").nth(i)
+
+                                try:
+                                    print(
+                                        f"Link {i}:",
+                                        "text =", repr(link.inner_text(timeout=1000)),
+                                        "href =", link.get_attribute("href"),
+                                        "aria-label =", link.get_attribute("aria-label")
+                                    )
+                                except Exception as e:
+                                    print(f"Error inspecting link {i}: {e}")
+                            #TESTING
+                    
+                            # Hover over the timestamp link to get tooltop
+                            timestamp_link.hover(timeout=3000)
+                            page.wait_for_timeout(1000)
+
+                            #TESTING
+                            print("Hovered link:", timestamp_link.get_attribute("href"))
+                            print("Tooltips on page:", page.locator('[role="tooltip"]').count())   
+                            #TESTING
+                    
+                            # Get timestamp from tooltip
+                            tooltips = page.locator('[role="tooltip"]')
+                            timestamp2 = tooltips.first.inner_text(timeout=1000).strip()
+                            # could add a layer of validation here - is what we got actually a date/time?
+                    
+                            print(f"Got timestamp: {timestamp2}")
+
+                        except Exception as e: # eventually add specific error handling - playwright timeout?
+                            print(f"Error extracting timestamp from dialog window post: {e}")
+                            timestamp2 = None
+
+                        # end timestamp
+
                         # can delete later, just helpful for seeing that playwright is expanding
                         time.sleep(1)
 
                         # close window
-                        dialog.get_by_role("button", name="Close").click(timeout=3000)
+                        page.keyboard.press("Escape")
         
                         # Relocate the same post again (its index may have changed after expanding)
                         # not sure about this... may be able to remove?
@@ -75,25 +125,29 @@ def extract_posts(page):
                         
                     except Exception as e:
                         print(f"Error expanding additional comments from post: {e}")
+                        timestamp2 = None
+
         
                     ## COPY END
+
+                # No comments to expand - may still have a few comments...?
                 else:
-                    print(f"No 'view more comments' found in ../../../.. from this message's container:\n {candidate_key}")
                     text = extract_post_text_no_comments(message_elements, next_message, next_key)
+                    timestamp2 = None
 
             except Exception as e:
                 print(f"Error extracting post: {e}")
 
             ## END NEW
+            timestamp = extract_post_timestamp_no_comments(page, next_message)
 
-            # GET POST TIMESTAMP --------------------------------------------------------------------------
-            timestamp = extract_post_timestamp(page, next_message)
 
             # Write post info back to posts list
             posts.append({
                 "type": "post",
                 "timestamp": timestamp,
-                "text": text,
+                "timestamp2": timestamp2,
+                "text": text
             })
 
             # Reset scrolls to 0 to find new next post
@@ -134,7 +188,7 @@ def extract_post_text_no_comments(message_elements, message, key):
 
     return text
 
-def extract_post_timestamp(page, message):
+def extract_post_timestamp_no_comments(page, message):
     try:
         # Locate timestamp link
         container = message.locator("xpath=../../../..")
