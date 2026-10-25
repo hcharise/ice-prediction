@@ -74,9 +74,6 @@ def extract_posts(page):
                             page.mouse.move(0, 0)
                             page.wait_for_timeout(200)
 
-                            print("\n--- TIMESTAMP LINK DEBUG ---")
-                            print("Number of header links:", header.locator("a").count())
-
                             for i in range(header.locator("a").count()):
                                 link = header.locator("a").nth(i)
 
@@ -94,11 +91,6 @@ def extract_posts(page):
                             # Hover over the timestamp link to get tooltop
                             timestamp_link.hover(timeout=3000)
                             page.wait_for_timeout(1000)
-
-                            #TESTING
-                            print("Hovered link:", timestamp_link.get_attribute("href"))
-                            print("Tooltips on page:", page.locator('[role="tooltip"]').count())   
-                            #TESTING
                     
                             # Get timestamp from tooltip
                             tooltips = page.locator('[role="tooltip"]')
