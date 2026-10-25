@@ -28,21 +28,6 @@ def extract_posts(page):
                 candidate_text = candidate.inner_text(timeout=1000).strip()
                 candidate_key = candidate_text[:100]
 
-                ## NEW
-                # search through to see where "view all comments" is located
-                try:
-                    candidate_container = candidate.locator("xpath=../../../..")
-                    container_text = candidate_container.inner_text(timeout=3000).strip()
-                    if "View more comments" in container_text:
-                        print(f"Found option to expand comments with ../../../..!")
-                    else:
-                        print(f"No 'view more comments' found in ../../../.. from this message's container:\n {candidate_key}")
-
-                except Exception as e:
-                    print(f"Error finding 'view more comments': {e}")
-
-                ## END NEW
-
                 # If next message_element candidate is new, exit search to extract post
                 if candidate_key not in processed_keys:
                     next_message = candidate
@@ -57,6 +42,21 @@ def extract_posts(page):
 
             # Mark message as processed before changing the DOM when expanding
             processed_keys.add(next_key)
+
+            ## NEW
+            # check if message has additional comments
+            try:
+                candidate_container = candidate.locator("xpath=../../../..")
+                container_text = candidate_container.inner_text(timeout=3000).strip()
+                if "View more comments" in container_text:
+                    print(f"Found option to expand comments with ../../../..!")
+                else:
+                    print(f"No 'view more comments' found in ../../../.. from this message's container:\n {candidate_key}")
+
+            except Exception as e:
+                print(f"Error finding 'view more comments': {e}")
+
+            ## END NEW
 
             # GET POST TEXT -------------------------------------------------------------------------------
             text = extract_post_text(message_elements, next_message, next_key)
@@ -127,7 +127,7 @@ def extract_post_timestamp(page, message):
 
     except Exception as e: # eventually add specific error handling - playwright timeout?
         timestamp = None
-        print(f"Error extracting timestamp from post {j}: {e}")
+        print(f"Error extracting timestamp from post: {e}")
 
     return timestamp
 
