@@ -55,29 +55,23 @@ def extract_posts(page):
                     try:
                         # Click "View more comments" button to show additional comments
                         candidate_container.get_by_role("button", name="View more comments").click(timeout=3000)
-                        # need to close post
-                        print("Opened a post!")
 
-                        # COPY MESSAGE NOW!!!
+                        # Extract text
                         dialog = page.get_by_role("dialog")
                         dialog_message = dialog.locator(
                             '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
                         )
                         text = dialog_message.inner_text(timeout=3000).strip()
-                        print(f" Extracted: {text}")
-                        # NEW ^^
 
                         # can delete later, just helpful for seeing that playwright is expanding
                         time.sleep(1)
+
+                        # close window
                         dialog.get_by_role("button", name="Close").click(timeout=3000)
         
                         # Relocate the same post again (its index may have changed after expanding)
-                        # not sure about this...
+                        # not sure about this... may be able to remove?
                         next_message = message_elements.filter(has_text=next_key).first
-
-                        # don't need this here noooooww, but probably want to add it back in and remove from other spot?
-                        # Re-extract full text
-                        # text = message.inner_text(timeout=3000).strip()
                         
                     except Exception as e:
                         print(f"Error expanding additional comments from post: {e}")
@@ -85,15 +79,12 @@ def extract_posts(page):
                     ## COPY END
                 else:
                     print(f"No 'view more comments' found in ../../../.. from this message's container:\n {candidate_key}")
+                    text = extract_post_text_no_comments(message_elements, next_message, next_key)
 
             except Exception as e:
-                print(f"Error finding 'view more comments': {e}")
+                print(f"Error extracting post: {e}")
 
             ## END NEW
-
-            # GET POST TEXT -------------------------------------------------------------------------------
-            # hiding this for now.... can delete if extration above works
-            # text = extract_post_text(message_elements, next_message, next_key)
 
             # GET POST TIMESTAMP --------------------------------------------------------------------------
             timestamp = extract_post_timestamp(page, next_message)
@@ -117,13 +108,11 @@ def extract_posts(page):
 
     return posts
 
-def extract_post_text(message_elements, message, key):
+def extract_post_text_no_comments(message_elements, message, key):
     try:
         # Extract visible text from post
         text = message.inner_text(timeout=3000).strip()
 
-        '''
-        # No longer necessary since posts expand when clicking "View more comments"?!
         # Check if post has additional text, ie has a "See more" button
         if "See more" in text:
             try:
@@ -138,7 +127,6 @@ def extract_post_text(message_elements, message, key):
                 
             except Exception as e:
                 print(f"Error expanding additional text from post: {e}")
-        '''
 
     except Exception as e:
         text = None
