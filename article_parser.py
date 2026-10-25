@@ -28,6 +28,21 @@ def extract_posts(page):
                 candidate_text = candidate.inner_text(timeout=1000).strip()
                 candidate_key = candidate_text[:100]
 
+                ## NEW
+                # search through to see where "view all comments" is located
+                try:
+                    candidate_container = candidate.locator("xpath=../../../..")
+                    container_text = candidate_container.inner_text(timeout=3000).strip()
+                    if "View more comments" in container_text:
+                        print(f"Found option to expand comments with ../../../..!")
+                    else:
+                        print(f"No 'view more comments' found in ../../../.. from this message's container:\n {candidate_key}")
+
+                except Exception as e:
+                    print(f"Error finding 'view more comments': {e}")
+
+                ## END NEW
+
                 # If next message_element candidate is new, exit search to extract post
                 if candidate_key not in processed_keys:
                     next_message = candidate

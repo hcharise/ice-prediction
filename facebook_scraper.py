@@ -33,12 +33,12 @@ def load_page(p):
     # input("Press ENTER after the page is fully visible... ")
     time.sleep(5)
 
-    return page, context
+    return page
 
 def main():
     with sync_playwright() as p:
 
-        page, context = load_page(p)
+        page = load_page(p)
 
         # EXTRACT POSTS & COMMENTS/REPLIES ----------------------------------------------------------------
         posts = [] # stores main posts
@@ -61,7 +61,7 @@ def main():
         # CLOSE BROWSER -----------------------------------------------------------------------------------
         # may want to revert to user prompting browser closing in the future
         # input("Press ENTER to close the browser... ")
-        context.close()
+        page.context.close()
         print("-----------------------------------------------------------------------------------------------")
 
 if __name__ == "__main__":
