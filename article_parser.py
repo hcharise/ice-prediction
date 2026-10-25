@@ -51,13 +51,22 @@ def extract_posts(page):
                 candidate_container = candidate.locator("xpath=../../../..")
                 container_text = candidate_container.inner_text(timeout=3000).strip()
                 if "View more comments" in container_text:
-                    print(f"Found option to expand comments with ../../../..!")
                      ## COPY
                     try:
                         # Click "View more comments" button to show additional comments
                         candidate_container.get_by_role("button", name="View more comments").click(timeout=3000)
                         # need to close post
                         print("Opened a post!")
+
+                        # COPY MESSAGE NOW!!!
+                        dialog = page.get_by_role("dialog")
+                        dialog_message = dialog.locator(
+                            '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+                        )
+                        text = dialog_message.inner_text(timeout=3000).strip()
+                        print(f" Extracted: {text}")
+                        # NEW ^^
+
                         time.sleep(1)
                         page.press("body", "Escape")
         
@@ -82,7 +91,8 @@ def extract_posts(page):
             ## END NEW
 
             # GET POST TEXT -------------------------------------------------------------------------------
-            text = extract_post_text(message_elements, next_message, next_key)
+            # hiding this for now.... can delete if extration above works
+            # text = extract_post_text(message_elements, next_message, next_key)
 
             # GET POST TIMESTAMP --------------------------------------------------------------------------
             timestamp = extract_post_timestamp(page, next_message)
@@ -112,6 +122,7 @@ def extract_post_text(message_elements, message, key):
         text = message.inner_text(timeout=3000).strip()
 
         '''
+        # No longer necessary since posts expand when clicking "View more comments"?!
         # Check if post has additional text, ie has a "See more" button
         if "See more" in text:
             try:
