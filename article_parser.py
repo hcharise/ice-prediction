@@ -29,6 +29,12 @@ def extract_posts(page):
                 candidate = message_elements.nth(j)
                 candidate_text = candidate.inner_text(timeout=1000).strip()
                 candidate_key = candidate_text[:100]
+                print(f"Candidate key = {candidate_key}")
+                
+                
+                candidate_key1 = candidate.inner_text(timeout=1000).strip()[:100]
+                print(f"Candidate key1 = {candidate_key1}")
+
 
                 # If next message_element candidate is new, exit search to extract post
                 if candidate_key not in processed_keys:
@@ -53,34 +59,17 @@ def extract_posts(page):
             try:
                 candidate_container = candidate.locator("xpath=../../../..")
                 container_text = candidate_container.inner_text(timeout=3000).strip()
+
+                # Need to expand comments to view whole post
                 if "View more comments" in container_text:
-                    try:
-                        # Click "View more comments" button to show additional comments
-                        candidate_container.get_by_role("button", name="View more comments").click(timeout=3000)
-
-                        # Extract text
-                        dialog = page.get_by_role("dialog")
-                        dialog_message = dialog.locator(
-                            '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
-                        )
-                        text = dialog_message.inner_text(timeout=3000).strip()
-
-                        # can delete later, just helpful for seeing that playwright is expanding
-                        time.sleep(1)
-
-                        # Close dialog window to return to main feed
-                        page.keyboard.press("Escape")
-        
-                        # Relocate the same post again (its index may have changed after expanding)
-                        # not sure about this... may be able to remove?
-                        next_message = message_elements.filter(has_text=next_key).first
-                        
-                    except Exception as e:
-                        print(f"Error expanding additional comments from post: {e}")
-
+                    text = extract_post_text_w_comments(page, candidate_container)
                 # No comments to expand - may still have a few comments...?
                 else:
                     text = extract_post_text_no_comments(message_elements, next_message, next_key)
+
+                # Relocate the same post again (its index may have changed after expanding)
+                # not sure about this... may be able to remove?
+                next_message = message_elements.filter(has_text=next_key).first
 
             except Exception as e:
                 print(f"Error extracting post: {e}")
@@ -103,6 +92,32 @@ def extract_posts(page):
             scroll_attempts += 1
 
     return posts
+
+
+def extract_post_text_w_comments(page, candidate_container):
+    try:
+        # Click "View more comments" button to show additional comments
+        candidate_container.get_by_role("button", name="View more comments").click(timeout=3000)
+
+        # Extract text
+        dialog = page.get_by_role("dialog")
+        dialog_message = dialog.locator(
+            '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+        )
+        text = dialog_message.inner_text(timeout=3000).strip()
+
+        # can delete later, just helpful for seeing that playwright is expanding
+        time.sleep(1)
+
+        # Close dialog window to return to main feed
+        page.keyboard.press("Escape")
+
+    except Exception as e:
+        print(f"Error expanding additional comments from post: {e}")
+        text = None
+
+    return text
+
 
 def extract_post_text_no_comments(message_elements, message, key):
     try:
