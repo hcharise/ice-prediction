@@ -45,13 +45,15 @@ def extract_posts(page):
             # Mark message as processed before changing the DOM when expanding
             processed_keys.add(next_key)
 
+            # Get timestamp
+            timestamp = extract_post_timestamp(page, next_message)
+
             ## NEW
             # check if message has additional comments
             try:
                 candidate_container = candidate.locator("xpath=../../../..")
                 container_text = candidate_container.inner_text(timeout=3000).strip()
                 if "View more comments" in container_text:
-                     ## COPY
                     try:
                         # Click "View more comments" button to show additional comments
                         candidate_container.get_by_role("button", name="View more comments").click(timeout=3000)
@@ -63,52 +65,10 @@ def extract_posts(page):
                         )
                         text = dialog_message.inner_text(timeout=3000).strip()
 
-                        # get timestamp
-                        try:
-                            # Locate timestamp link
-                            dialog_container = dialog_message.locator("xpath=../../../..")
-                            header = dialog_container.locator("xpath=./*").nth(1)
-                            timestamp_link = header.locator("a").nth(2)
-
-                            #TESTING
-                            page.mouse.move(0, 0)
-                            page.wait_for_timeout(200)
-
-                            for i in range(header.locator("a").count()):
-                                link = header.locator("a").nth(i)
-
-                                try:
-                                    print(
-                                        f"Link {i}:",
-                                        "text =", repr(link.inner_text(timeout=1000)),
-                                        "href =", link.get_attribute("href"),
-                                        "aria-label =", link.get_attribute("aria-label")
-                                    )
-                                except Exception as e:
-                                    print(f"Error inspecting link {i}: {e}")
-                            #TESTING
-                    
-                            # Hover over the timestamp link to get tooltop
-                            timestamp_link.hover(timeout=3000)
-                            page.wait_for_timeout(1000)
-                    
-                            # Get timestamp from tooltip
-                            tooltips = page.locator('[role="tooltip"]')
-                            timestamp2 = tooltips.first.inner_text(timeout=1000).strip()
-                            # could add a layer of validation here - is what we got actually a date/time?
-                    
-                            print(f"Got timestamp: {timestamp2}")
-
-                        except Exception as e: # eventually add specific error handling - playwright timeout?
-                            print(f"Error extracting timestamp from dialog window post: {e}")
-                            timestamp2 = None
-
-                        # end timestamp
-
                         # can delete later, just helpful for seeing that playwright is expanding
                         time.sleep(1)
 
-                        # close window
+                        # Close dialog window to return to main feed
                         page.keyboard.press("Escape")
         
                         # Relocate the same post again (its index may have changed after expanding)
@@ -117,28 +77,18 @@ def extract_posts(page):
                         
                     except Exception as e:
                         print(f"Error expanding additional comments from post: {e}")
-                        timestamp2 = None
-
-        
-                    ## COPY END
 
                 # No comments to expand - may still have a few comments...?
                 else:
                     text = extract_post_text_no_comments(message_elements, next_message, next_key)
-                    timestamp2 = None
 
             except Exception as e:
                 print(f"Error extracting post: {e}")
-
-            ## END NEW
-            timestamp = extract_post_timestamp_no_comments(page, next_message)
-
 
             # Write post info back to posts list
             posts.append({
                 "type": "post",
                 "timestamp": timestamp,
-                "timestamp2": timestamp2,
                 "text": text
             })
 
@@ -180,7 +130,7 @@ def extract_post_text_no_comments(message_elements, message, key):
 
     return text
 
-def extract_post_timestamp_no_comments(page, message):
+def extract_post_timestamp(page, message):
     try:
         # Locate timestamp link
         container = message.locator("xpath=../../../..")
