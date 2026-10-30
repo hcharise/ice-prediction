@@ -3,7 +3,7 @@ from urllib.parse import urlparse, parse_qs
 
 def extract_posts(page):
     SCROLL_MAX = 10 # max scrolls if no new posts are found
-    POSTS_MAX = 10 # maximum number of posts to be retrieved (what ultimately ends the looping)
+    POSTS_MAX = 1 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
     processed_keys = set() # stores keys from posts already processed to avoid duplication
     scroll_attempts = 0
@@ -101,6 +101,7 @@ def extract_post_details(page, message):
         # Extract url and text
         url = page.url
         text = extract_post_text(page)
+        extract_comments(page)
     except Exception as e:
         print(f"Error extracting TEXT/URL from post: {e}")
     finally:
@@ -118,6 +119,7 @@ def extract_post_details(page, message):
         "text": text
     }
 
+
 def locate_timestamp_link(message):
 
     container = message.locator("xpath=../../../..")
@@ -125,6 +127,7 @@ def locate_timestamp_link(message):
     timestamp_link = header.locator("a").nth(2)
 
     return timestamp_link
+
 
 def extract_timestamp(timestamp_link, page):
     # Hover over the timestamp link and get timestamp
@@ -136,6 +139,7 @@ def extract_timestamp(timestamp_link, page):
 
     return timestamp
 
+
 def open_dialog(page, timestamp_link):
     timestamp_link.click()
     page.wait_for_timeout(1500)
@@ -144,6 +148,7 @@ def open_dialog(page, timestamp_link):
 def close_dialog(page):
     page.go_back()
     page.wait_for_timeout(1500)
+
     
 def extract_post_text(page):
 
@@ -169,6 +174,7 @@ def extract_comments(page):
 
         try:
             text = article.inner_text(timeout=1000).strip()
+            print(f"Text: {text}")
         except Exception:
             continue
 

@@ -47,19 +47,19 @@ def main():
         posts = [] # stores main posts
         posts = extract_posts(page)
 
-        comments = [] # stores comments & replies
-        comments = extract_comments(page)
+       # comments = [] # stores comments & replies
+       # comments = extract_comments(page)
 
         # Save found posts/comments/replies to JSON
         with open("facebook_posts.json", "w", encoding="utf-8") as f:
             json.dump(posts, f, indent=2, ensure_ascii=False)
 
-        with open("facebook_comments&replies.json", "w", encoding="utf-8") as f:
-            json.dump(comments, f, indent=2, ensure_ascii=False)
+       # with open("facebook_comments&replies.json", "w", encoding="utf-8") as f:
+       #     json.dump(comments, f, indent=2, ensure_ascii=False)
 
         print(f"Saved {len(posts)} posts.")
 
-        print(f"Saved {len(comments)} comments & replies.")
+       # print(f"Saved {len(comments)} comments & replies.")
 
         # CLOSE BROWSER -----------------------------------------------------------------------------------
         # may want to revert to user prompting browser closing in the future
