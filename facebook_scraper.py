@@ -3,6 +3,9 @@ import json
 import time
 from article_parser import extract_comments, extract_posts
 
+## To reactivate virutal environment: source .venv/bin/activate
+
+
 PAGE_URL = "https://www.facebook.com/COIceconditions" # facebook URL to retrieve posts from
 PROFILE_DIR = "./facebook_playwright_profile" # save facebook credentials
 SCROLL_COUNT = 1 # number of times script will scroll down on facebook page
