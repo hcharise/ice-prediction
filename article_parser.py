@@ -43,12 +43,13 @@ def extract_posts(page):
                 # Mark message as processed before changing the DOM when expanding
                 processed_keys.add(next_key)
 
-                # Prior to extracting timestamp, confirm that Playwright is on the correct post still
+                # Confirm that Playwright is on the correct post still
                 next_message = message_elements.filter(has_text=next_key).first
 
-                # Get timestamp from message
+                # Get timestamp and text from message
                 post_details = extract_post_details(page, next_message)
 
+                # Confirm that Playwright is on the correct post still
                 next_message = message_elements.filter(has_text=next_key).first
 
             except Exception as e:
@@ -58,6 +59,7 @@ def extract_posts(page):
             posts.append({
                 "type": "post",
                 "timestamp": post_details["timestamp"],
+                "url": post_details["url"],
                 "text": post_details["text"]
             })
 
@@ -80,6 +82,7 @@ def extract_post_details(page, message):
 
     timestamp = None
     text = None
+    url = None
 
     try:
         # Locate timestamp link
@@ -94,29 +97,31 @@ def extract_post_details(page, message):
             tooltips = page.locator('[role="tooltip"]')
             timestamp = tooltips.first.inner_text(timeout=1000).strip()
             # could add a layer of validation here - is what we got actually a date/time?
+
         except Exception as e:
             print(f"Error extracting TIMESTAMP from post: {e}")
-            timestamp = None
 
         try:
-            # Click timestamp to expand post and get text
+            # Click timestamp to open page dialog box
             timestamp_link.click()
             page.wait_for_timeout(1500)
+
+            # Extract url and text
+            url = page.url
             text = extract_post_text(page)
 
             # Return to main feed
             page.go_back()
+
         except Exception as e:
             print(f"Error extracting TEXT from post: {e}")
-            text = None
 
     except Exception as e: # eventually add specific error handling - playwright timeout?
-        timestamp = None
-        text = None
         print(f"Error extracting DETAILS from post: {e}")
 
     post_details = {
         "timestamp": timestamp,
+        "url": url,
         "text": text
     }
 
