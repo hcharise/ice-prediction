@@ -49,19 +49,16 @@ def extract_posts(page):
                 # Get timestamp and text from message
                 post_details = extract_post_details(page, next_message)
 
-                # Confirm that Playwright is on the correct post still
-                next_message = message_elements.filter(has_text=next_key).first
+                # Write post info back to posts list
+                posts.append({
+                    "type": "post",
+                    "timestamp": post_details["timestamp"],
+                    "url": post_details["url"],
+                    "text": post_details["text"]
+                })
 
             except Exception as e:
                 print(f"Error extracting post: {e}")
-
-            # Write post info back to posts list
-            posts.append({
-                "type": "post",
-                "timestamp": post_details["timestamp"],
-                "url": post_details["url"],
-                "text": post_details["text"]
-            })
 
             page.wait_for_timeout(1500)
 
@@ -84,62 +81,78 @@ def extract_post_details(page, message):
     text = None
     url = None
 
+    timestamp_link = locate_timestamp_link(message)
+
+    # Extract timestamp from tooltip
     try:
-        # Locate timestamp link
-        container = message.locator("xpath=../../../..")
-        header = container.locator("xpath=./*").nth(1)
-        timestamp_link = header.locator("a").nth(2)
+        timestamp = extract_timestamp(timestamp_link, page)
+    except Exception as e:
+        print(f"Error extracting TIMESTAMP from post: {e}")
 
-        try:
-            # Hover over the timestamp link and get timestamp
-            timestamp_link.hover(timeout=3000)
-            page.wait_for_timeout(1000)
-            tooltips = page.locator('[role="tooltip"]')
-            timestamp = tooltips.first.inner_text(timeout=1000).strip()
-            # could add a layer of validation here - is what we got actually a date/time?
+    # Flag if dialog box is opened
+    dialog_opened = False
 
-        except Exception as e:
-            print(f"Error extracting TIMESTAMP from post: {e}")
+    # Extract url and text
+    try:
+        # Open dialog and update flag
+        open_dialog(page, timestamp_link)
+        dialog_opened = True
 
-        try:
-            # Click timestamp to open page dialog box
-            timestamp_link.click()
-            page.wait_for_timeout(1500)
+        # Extract url and text
+        url = page.url
+        text = extract_post_text(page)
+    except Exception as e:
+        print(f"Error extracting TEXT/URL from post: {e}")
+    finally:
+        # Close dialog if opened
+        if dialog_opened:
+            try:
+                close_dialog(page)
+            except Exception as e:
+                print(f"Error closing dialog: {e}")
+                raise
 
-            # Extract url and text
-            url = page.url
-            text = extract_post_text(page)
-
-            # Return to main feed
-            page.go_back()
-
-        except Exception as e:
-            print(f"Error extracting TEXT from post: {e}")
-
-    except Exception as e: # eventually add specific error handling - playwright timeout?
-        print(f"Error extracting DETAILS from post: {e}")
-
-    post_details = {
+    return {
         "timestamp": timestamp,
         "url": url,
         "text": text
     }
 
-    return post_details
+def locate_timestamp_link(message):
 
+    container = message.locator("xpath=../../../..")
+    header = container.locator("xpath=./*").nth(1)
+    timestamp_link = header.locator("a").nth(2)
 
+    return timestamp_link
+
+def extract_timestamp(timestamp_link, page):
+    # Hover over the timestamp link and get timestamp
+    timestamp_link.hover(timeout=3000)
+    page.wait_for_timeout(1000)
+    tooltips = page.locator('[role="tooltip"]')
+    timestamp = tooltips.first.inner_text(timeout=1000).strip()
+    # could add a layer of validation here - is what we got actually a date/time?
+
+    return timestamp
+
+def open_dialog(page, timestamp_link):
+    timestamp_link.click()
+    page.wait_for_timeout(1500)
+
+    
+def close_dialog(page):
+    page.go_back()
+    page.wait_for_timeout(1500)
+    
 def extract_post_text(page):
-    try:
-        # Extract text
-        dialog = page.get_by_role("dialog")
-        dialog_message = dialog.locator(
-            '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
-        )
-        text = dialog_message.inner_text(timeout=3000).strip()
 
-    except Exception as e:
-        print(f"Error extracting text from post: {e}")
-        text = None
+    # Extract text
+    dialog = page.get_by_role("dialog")
+    dialog_message = dialog.locator(
+        '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+    )
+    text = dialog_message.inner_text(timeout=3000).strip()
 
     return text
 
@@ -148,7 +161,7 @@ def extract_comments(page):
 
     # Identify article elements ie comments and replies
     articles = page.locator('[role="article"]')
-    print(f"Found {articles.count()} article elements")
+    print(f"Found {articles.count()} possible comments and replies (article elements).")
 
     # Try extracting text and timestamp from each article
     for i in range(articles.count()):
