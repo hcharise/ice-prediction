@@ -1,7 +1,7 @@
 from playwright.sync_api import sync_playwright
 import json
 import time
-from article_parser import extract_comments, extract_posts
+from article_parser import extract_posts_and_comments
 
 ## To reactivate virutal environment: source .venv/bin/activate
 
@@ -45,17 +45,15 @@ def main():
 
         # EXTRACT POSTS & COMMENTS/REPLIES ----------------------------------------------------------------
         posts = [] # stores main posts
-        posts = extract_posts(page)
-
-       # comments = [] # stores comments & replies
-       # comments = extract_comments(page)
+        comments = [] # stores comments & replies
+        posts, comments = extract_posts_and_comments(page)
 
         # Save found posts/comments/replies to JSON
         with open("facebook_posts.json", "w", encoding="utf-8") as f:
             json.dump(posts, f, indent=2, ensure_ascii=False)
 
-       # with open("facebook_comments&replies.json", "w", encoding="utf-8") as f:
-       #     json.dump(comments, f, indent=2, ensure_ascii=False)
+        with open("facebook_comments&replies.json", "w", encoding="utf-8") as f:
+            json.dump(comments, f, indent=2, ensure_ascii=False)
 
         print(f"Saved {len(posts)} posts.")
 

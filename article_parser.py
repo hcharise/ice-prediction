@@ -46,8 +46,25 @@ def extract_posts(page):
                 # Confirm that Playwright is on the correct post still
                 next_message = message_elements.filter(has_text=next_key).first
 
+                ## timestamp, opening
+                timestamp = None
+                timestamp_link = locate_timestamp_link(next_message)
+            
+                # Extract timestamp from tooltip
+                try:
+                    timestamp = extract_timestamp(timestamp_link, page)
+                except Exception as e:
+                    print(f"Error extracting TIMESTAMP from post: {e}")
+            
+                # Flag if dialog box is opened
+                dialog_opened = False
+
+                # Open dialog and update flag
+                open_dialog(page, timestamp_link)
+                dialog_opened = True
+
                 # Get timestamp and text from message
-                post_details = extract_post_details(page, next_message)
+                post_details = extract_post_details(page, next_message, timestamp)
 
                 # Write post info back to posts list
                 posts.append({
@@ -59,6 +76,15 @@ def extract_posts(page):
 
             except Exception as e:
                 print(f"Error extracting post: {e}")
+
+            finally:
+                # Close dialog if opened
+                if dialog_opened:
+                    try:
+                        close_dialog(page)
+                    except Exception as e:
+                        print(f"Error closing dialog: {e}")
+                        raise
 
             page.wait_for_timeout(1500)
 
@@ -75,43 +101,18 @@ def extract_posts(page):
     return posts
 
 
-def extract_post_details(page, message):
+def extract_post_details(page, message, timestamp):
 
-    timestamp = None
     text = None
     url = None
 
-    timestamp_link = locate_timestamp_link(message)
-
-    # Extract timestamp from tooltip
-    try:
-        timestamp = extract_timestamp(timestamp_link, page)
-    except Exception as e:
-        print(f"Error extracting TIMESTAMP from post: {e}")
-
-    # Flag if dialog box is opened
-    dialog_opened = False
-
     # Extract url and text
     try:
-        # Open dialog and update flag
-        open_dialog(page, timestamp_link)
-        dialog_opened = True
-
-        # Extract url and text
         url = page.url
         text = extract_post_text(page)
         extract_comments(page)
     except Exception as e:
         print(f"Error extracting TEXT/URL from post: {e}")
-    finally:
-        # Close dialog if opened
-        if dialog_opened:
-            try:
-                close_dialog(page)
-            except Exception as e:
-                print(f"Error closing dialog: {e}")
-                raise
 
     return {
         "timestamp": timestamp,
@@ -174,7 +175,7 @@ def extract_comments(page):
 
         try:
             text = article.inner_text(timeout=1000).strip()
-            print(f"Text: {text}")
+            print(f"Text: {text[:10]}")
         except Exception:
             continue
 
@@ -194,6 +195,7 @@ def extract_comments(page):
             "links": link_info
         })
 
+    ## NEED to add scrolling here to capture all posts
     return comments
 
 def extract_links(article):
