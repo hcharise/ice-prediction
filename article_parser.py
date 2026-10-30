@@ -1,7 +1,5 @@
 import re
 from urllib.parse import urlparse, parse_qs
-import time
-
 
 def extract_posts(page):
     SCROLL_MAX = 10 # max scrolls if no new posts are found
@@ -27,14 +25,7 @@ def extract_posts(page):
             try:
                 # Get key from next message_element candidate
                 candidate = message_elements.nth(j)
-                candidate_text = candidate.inner_text(timeout=1000).strip()
-                candidate_key = candidate_text[:100]
-                print(f"Candidate key = {candidate_key}")
-                
-                
-                candidate_key1 = candidate.inner_text(timeout=1000).strip()[:100]
-                print(f"Candidate key1 = {candidate_key1}")
-
+                candidate_key = candidate.inner_text(timeout=1000).strip()[:100]
 
                 # If next message_element candidate is new, exit search to extract post
                 if candidate_key not in processed_keys:
@@ -47,28 +38,17 @@ def extract_posts(page):
 
         # EXTRACT POST TEXT & TIMESTAMP -------------------------------------------------------------------
         if next_message is not None:
-
-            # Mark message as processed before changing the DOM when expanding
-            processed_keys.add(next_key)
-
-            # Get timestamp
-            timestamp = extract_post_timestamp(page, next_message)
-
-            ## NEW
-            # check if message has additional comments
             try:
-                candidate_container = candidate.locator("xpath=../../../..")
-                container_text = candidate_container.inner_text(timeout=3000).strip()
 
-                # Need to expand comments to view whole post
-                if "View more comments" in container_text:
-                    text = extract_post_text_w_comments(page, candidate_container)
-                # No comments to expand - may still have a few comments...?
-                else:
-                    text = extract_post_text_no_comments(message_elements, next_message, next_key)
+                # Mark message as processed before changing the DOM when expanding
+                processed_keys.add(next_key)
 
-                # Relocate the same post again (its index may have changed after expanding)
-                # not sure about this... may be able to remove?
+                # Prior to extracting timestamp, confirm that Playwright is on the correct post still
+                next_message = message_elements.filter(has_text=next_key).first
+
+                # Get timestamp from message
+                post_details = extract_post_details(page, next_message)
+
                 next_message = message_elements.filter(has_text=next_key).first
 
             except Exception as e:
@@ -77,9 +57,11 @@ def extract_posts(page):
             # Write post info back to posts list
             posts.append({
                 "type": "post",
-                "timestamp": timestamp,
-                "text": text
+                "timestamp": post_details["timestamp"],
+                "text": post_details["text"]
             })
+
+            page.wait_for_timeout(1500)
 
             # Reset scrolls to 0 to find new next post
             scroll_attempts = 0
@@ -94,11 +76,55 @@ def extract_posts(page):
     return posts
 
 
-def extract_post_text_w_comments(page, candidate_container):
-    try:
-        # Click "View more comments" button to show additional comments
-        candidate_container.get_by_role("button", name="View more comments").click(timeout=3000)
+def extract_post_details(page, message):
 
+    timestamp = None
+    text = None
+
+    try:
+        # Locate timestamp link
+        container = message.locator("xpath=../../../..")
+        header = container.locator("xpath=./*").nth(1)
+        timestamp_link = header.locator("a").nth(2)
+
+        try:
+            # Hover over the timestamp link and get timestamp
+            timestamp_link.hover(timeout=3000)
+            page.wait_for_timeout(1000)
+            tooltips = page.locator('[role="tooltip"]')
+            timestamp = tooltips.first.inner_text(timeout=1000).strip()
+            # could add a layer of validation here - is what we got actually a date/time?
+        except Exception as e:
+            print(f"Error extracting TIMESTAMP from post: {e}")
+            timestamp = None
+
+        try:
+            # Click timestamp to expand post and get text
+            timestamp_link.click()
+            page.wait_for_timeout(1500)
+            text = extract_post_text(page)
+
+            # Return to main feed
+            page.go_back()
+        except Exception as e:
+            print(f"Error extracting TEXT from post: {e}")
+            text = None
+
+    except Exception as e: # eventually add specific error handling - playwright timeout?
+        timestamp = None
+        text = None
+        print(f"Error extracting DETAILS from post: {e}")
+
+    post_details = {
+        "timestamp": timestamp,
+        "text": text
+    }
+
+    return post_details
+
+
+def extract_post_text(page):
+    try:
         # Extract text
         dialog = page.get_by_role("dialog")
         dialog_message = dialog.locator(
@@ -106,66 +132,11 @@ def extract_post_text_w_comments(page, candidate_container):
         )
         text = dialog_message.inner_text(timeout=3000).strip()
 
-        # can delete later, just helpful for seeing that playwright is expanding
-        time.sleep(1)
-
-        # Close dialog window to return to main feed
-        page.keyboard.press("Escape")
-
     except Exception as e:
-        print(f"Error expanding additional comments from post: {e}")
-        text = None
-
-    return text
-
-
-def extract_post_text_no_comments(message_elements, message, key):
-    try:
-        # Extract visible text from post
-        text = message.inner_text(timeout=3000).strip()
-
-        # Check if post has additional text, ie has a "See more" button
-        if "See more" in text:
-            try:
-                # Click "See more" button to expand text
-                message.get_by_role("button", name="See more").click(timeout=3000)
-
-                # Relocate the same post again (its index may have changed after expanding)
-                message = message_elements.filter(has_text=key).first
-
-                # Re-extract full text
-                text = message.inner_text(timeout=3000).strip()
-                
-            except Exception as e:
-                print(f"Error expanding additional text from post: {e}")
-
-    except Exception as e:
-        text = None
         print(f"Error extracting text from post: {e}")
+        text = None
 
     return text
-
-def extract_post_timestamp(page, message):
-    try:
-        # Locate timestamp link
-        container = message.locator("xpath=../../../..")
-        header = container.locator("xpath=./*").nth(1)
-        timestamp_link = header.locator("a").nth(2)
-
-        # Hover over the timestamp link to get tooltop
-        timestamp_link.hover(timeout=3000)
-        page.wait_for_timeout(1000)
-
-        # Get timestamp from tooltip
-        tooltips = page.locator('[role="tooltip"]')
-        timestamp = tooltips.first.inner_text(timeout=1000).strip()
-        # could add a layer of validation here - is what we got actually a date/time?
-
-    except Exception as e: # eventually add specific error handling - playwright timeout?
-        timestamp = None
-        print(f"Error extracting timestamp from post: {e}")
-
-    return timestamp
 
 def extract_comments(page):
     comments = []
