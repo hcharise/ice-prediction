@@ -1,10 +1,11 @@
 import re
 from urllib.parse import urlparse, parse_qs
 
-def extract_posts(page):
+def extract_posts_and_comments(page):
     SCROLL_MAX = 10 # max scrolls if no new posts are found
     POSTS_MAX = 1 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
+    comments = []
     processed_keys = set() # stores keys from posts already processed to avoid duplication
     scroll_attempts = 0
     
@@ -63,16 +64,18 @@ def extract_posts(page):
                 open_dialog(page, timestamp_link)
                 dialog_opened = True
 
-                # Get timestamp and text from message
+                # POST DETAILS
                 post_details = extract_post_details(page, next_message, timestamp)
-
-                # Write post info back to posts list
                 posts.append({
                     "type": "post",
                     "timestamp": post_details["timestamp"],
                     "url": post_details["url"],
                     "text": post_details["text"]
                 })
+
+                # COMMENT DETAILS
+                post_comments = extract_comments(page) #, post_details["url"]
+                comments.extend(post_comments)
 
             except Exception as e:
                 print(f"Error extracting post: {e}")
@@ -98,7 +101,7 @@ def extract_posts(page):
 
             scroll_attempts += 1
 
-    return posts
+    return posts, comments
 
 
 def extract_post_details(page, message, timestamp):
@@ -110,7 +113,6 @@ def extract_post_details(page, message, timestamp):
     try:
         url = page.url
         text = extract_post_text(page)
-        extract_comments(page)
     except Exception as e:
         print(f"Error extracting TEXT/URL from post: {e}")
 
