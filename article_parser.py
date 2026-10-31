@@ -177,7 +177,6 @@ def extract_comments(page):
 
         try:
             text = article.inner_text(timeout=1000).strip()
-            print(f"Text: {text[:10]}")
         except Exception:
             continue
 
