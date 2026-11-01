@@ -74,8 +74,7 @@ def extract_posts_and_comments(page):
                 })
 
                 # COMMENT DETAILS
-                print(f"Link in ExtractBoth: \n{post_details['url']}")
-                post_comments = extract_comments(page) #, post_details["url"]
+                post_comments = extract_comments(page, post_details["url"])
                 comments.extend(post_comments)
 
             except Exception as e:
@@ -165,7 +164,7 @@ def extract_post_text(page):
 
     return text
 
-def extract_comments(page):
+def extract_comments(page, post_url):
     comments = []
 
     # Identify article elements ie comments and replies
@@ -190,7 +189,7 @@ def extract_comments(page):
         comments.append({
             "type": metadata["type"],
             "timestamp": metadata["timestamp"],
-            "post_url": metadata["post_url"],
+            "post_url": post_url,
             "comment_id": metadata["comment_id"],
             "reply_comment_id": metadata["reply_comment_id"],
             "text": text, ## string of text from inner_text of the article
@@ -239,7 +238,6 @@ def extract_metadata(link_info):
     metadata = {
             "type": "unknown",
             "timestamp": None,
-            "post_url": None,
             "comment_id": None,
             "reply_comment_id": None,
         }
@@ -254,13 +252,11 @@ def extract_metadata(link_info):
         # Get comment ID
         parsed = urlparse(href)
         params = parse_qs(parsed.query)
-        clean_post_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
 
         if "reply_comment_id" in params:
             metadata = {
                 "type": "reply",
                 "timestamp": link.get("aria_label"),
-                "post_url": clean_post_url,
                 "comment_id": params.get("comment_id", [None])[0],
                 "reply_comment_id": params.get("reply_comment_id", [None])[0],
             }
@@ -270,7 +266,6 @@ def extract_metadata(link_info):
             metadata = {
                 "type": "comment",
                 "timestamp": link.get("aria_label"),
-                "post_url": clean_post_url,
                 "comment_id": params.get("comment_id", [None])[0],
                 "reply_comment_id": None,
             }
@@ -280,7 +275,6 @@ def extract_metadata(link_info):
             metadata = {
                 "type": "unknown",
                 "timestamp": link.get("aria_label"),
-                "post_url": clean_post_url,
                 "comment_id": None,
                 "reply_comment_id": None,
             }
