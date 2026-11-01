@@ -75,7 +75,7 @@ def extract_posts_and_comments(page):
                 })
 
                 # COMMENT DETAILS
-                post_comments = extract_comments(page, post_details["url"])
+                post_comments = extract_comments(page, post_details["post_id"])
                 comments.extend(post_comments)
 
             except Exception as e:
@@ -182,7 +182,7 @@ def extract_post_id(url):
     return post_id
 
 
-def extract_comments(page, post_url):
+def extract_comments(page, post_id):
     comments = []
 
     # Identify article elements ie comments and replies
@@ -215,7 +215,7 @@ def extract_comments(page, post_url):
         try:
             comments.append({
                 "type": "comment",
-                "post_url": post_url,
+                "post_id": post_id,
                 "timestamp": comment_details["timestamp"],
                 "comment_id": comment_details["comment_id"],
                 "text": text, ## string of text from inner_text of the article
