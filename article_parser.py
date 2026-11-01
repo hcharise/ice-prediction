@@ -74,6 +74,7 @@ def extract_posts_and_comments(page):
                 })
 
                 # COMMENT DETAILS
+                print(f"Link in ExtractBoth: \n{post_details['url']}")
                 post_comments = extract_comments(page) #, post_details["url"]
                 comments.extend(post_comments)
 
@@ -122,7 +123,7 @@ def extract_post_details(page, message, timestamp):
         "text": text
     }
 
-
+# maybe rename to post link?
 def locate_timestamp_link(message):
 
     container = message.locator("xpath=../../../..")
@@ -192,18 +193,20 @@ def extract_comments(page):
             "post_url": metadata["post_url"],
             "comment_id": metadata["comment_id"],
             "reply_comment_id": metadata["reply_comment_id"],
-            "text": text,
-            "links": link_info
+            "text": text, ## string of text from inner_text of the article
+            "links": link_info ## expands from extract_links
         })
 
-    ## NEED to add scrolling here to capture all posts
+    ## NEED to add scrolling here/somewhere to capture all posts
     return comments
 
 def extract_links(article):
 
+    # Find all hyperlinks in the comment
     links = article.locator("a")
     link_info = []
 
+    # for up to 25 links, identify link details
     for i in range(min(links.count(), 25)):
         link = links.nth(i)
 
@@ -222,22 +225,17 @@ def extract_links(article):
         except Exception:
             aria_label = None
 
-
-        if (
-            re.fullmatch(r"\d+[smhdwy]", link_text)
-            or "facebook.com" in (href or "")
-            or aria_label
-        ):
-            link_info.append({
-                "text": link_text,
-                "href": href,
-                "aria_label": aria_label,
-            })
+        link_info.append({
+            "text": link_text,
+            "href": href,
+            "aria_label": aria_label,
+        })
     
     return link_info
 
 def extract_metadata(link_info):
 
+    # Initialize
     metadata = {
             "type": "unknown",
             "timestamp": None,
@@ -246,15 +244,16 @@ def extract_metadata(link_info):
             "reply_comment_id": None,
         }
 
+    # For each link, fill in known data?
     for link in link_info:
         href = link.get("href") or ""
 
         if "/COIceconditions/posts/" not in href:
             continue
 
+        # Get comment ID
         parsed = urlparse(href)
         params = parse_qs(parsed.query)
-
         clean_post_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
 
         if "reply_comment_id" in params:
