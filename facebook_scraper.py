@@ -52,7 +52,7 @@ def main():
         with open("facebook_posts.json", "w", encoding="utf-8") as f:
             json.dump(posts, f, indent=2, ensure_ascii=False)
 
-        with open("facebook_comments&replies.json", "w", encoding="utf-8") as f:
+        with open("facebook_comments.json", "w", encoding="utf-8") as f:
             json.dump(comments, f, indent=2, ensure_ascii=False)
 
         print(f"Saved {len(posts)} posts.")
