@@ -183,8 +183,8 @@ def extract_comments(page, post_url):
         if not text:
             continue
 
-        link_info = extract_links(article)
-        metadata = extract_metadata(link_info)
+        # get metadata from links
+        metadata = extract_links(article)
 
         comments.append({
             "type": metadata["type"],
@@ -192,7 +192,6 @@ def extract_comments(page, post_url):
             "post_url": post_url,
             "comment_id": metadata["comment_id"],
             "text": text, ## string of text from inner_text of the article
-            "links": link_info ## expands from extract_links
         })
 
     ## NEED to add scrolling here/somewhere to capture all posts
@@ -215,6 +214,8 @@ def extract_links(article):
 
         try:
             href = link.get_attribute("href")
+            if "/COIceconditions/posts/" in href:
+                metadata = extract_metadata(link, href)
         except Exception:
             href = None
 
@@ -229,32 +230,24 @@ def extract_links(article):
             "aria_label": aria_label,
         })
     
-    return link_info
+    return metadata
 
-def extract_metadata(link_info):
+def extract_metadata(link, href):
 
-    # Initialize
+    # Get params to extract comment ID
+    parsed = urlparse(href)
+    params = parse_qs(parsed.query)
+
     metadata = {
-            "type": "unknown",
-            "timestamp": None,
-            "comment_id": None,
-        }
-
-    # For each link, fill in known data?
-    for link in link_info:
-        href = link.get("href") or ""
-
-        if "/COIceconditions/posts/" not in href:
-            continue
-
-        # Get comment ID
-        parsed = urlparse(href)
-        params = parse_qs(parsed.query)
-
-        metadata = {
-            "type": "reply",
-            "timestamp": link.get("aria_label"),
-            "comment_id": params.get("comment_id", [None])[0],
-        }
+        "type": "comment",
+        "timestamp": link.get_attribute("aria-label"),
+        "comment_id": params.get("comment_id", [None])[0],
+    }
 
     return metadata
+
+# link info finds all links in the post
+# then metadata goes trhoguh all the links and finds the one with the real details, extracts those details
+
+# so we never need to see the link info
+# and in fact, can we not go through so many links? anyway to narrow to the corect link right away?
