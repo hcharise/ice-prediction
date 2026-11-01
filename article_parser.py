@@ -191,7 +191,6 @@ def extract_comments(page, post_url):
             "timestamp": metadata["timestamp"],
             "post_url": post_url,
             "comment_id": metadata["comment_id"],
-            "reply_comment_id": metadata["reply_comment_id"],
             "text": text, ## string of text from inner_text of the article
             "links": link_info ## expands from extract_links
         })
@@ -239,7 +238,6 @@ def extract_metadata(link_info):
             "type": "unknown",
             "timestamp": None,
             "comment_id": None,
-            "reply_comment_id": None,
         }
 
     # For each link, fill in known data?
@@ -253,31 +251,10 @@ def extract_metadata(link_info):
         parsed = urlparse(href)
         params = parse_qs(parsed.query)
 
-        if "reply_comment_id" in params:
-            metadata = {
-                "type": "reply",
-                "timestamp": link.get("aria_label"),
-                "comment_id": params.get("comment_id", [None])[0],
-                "reply_comment_id": params.get("reply_comment_id", [None])[0],
-            }
-            break
-
-        elif "comment_id" in params:
-            metadata = {
-                "type": "comment",
-                "timestamp": link.get("aria_label"),
-                "comment_id": params.get("comment_id", [None])[0],
-                "reply_comment_id": None,
-            }
-            break
-
-        else:
-            metadata = {
-                "type": "unknown",
-                "timestamp": link.get("aria_label"),
-                "comment_id": None,
-                "reply_comment_id": None,
-            }
-            break
+        metadata = {
+            "type": "reply",
+            "timestamp": link.get("aria_label"),
+            "comment_id": params.get("comment_id", [None])[0],
+        }
 
     return metadata
