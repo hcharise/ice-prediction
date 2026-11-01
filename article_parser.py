@@ -184,57 +184,27 @@ def extract_comments(page, post_url):
             continue
 
         # get metadata from links
-        metadata = extract_links(article)
+        comment_details = extract_comment_details(article)
 
         comments.append({
-            "type": metadata["type"],
-            "timestamp": metadata["timestamp"],
+            "type": comment_details["type"],
+            "timestamp": comment_details["timestamp"],
             "post_url": post_url,
-            "comment_id": metadata["comment_id"],
+            "comment_id": comment_details["comment_id"],
             "text": text, ## string of text from inner_text of the article
         })
 
     ## NEED to add scrolling here/somewhere to capture all posts
     return comments
 
-def extract_links(article):
+# Gets timestamp and comment ID from each comment
+def extract_comment_details(article):
 
-    # Find all hyperlinks in the comment
-    links = article.locator("a")
-    link_info = []
+    # Identify link on comment that contains metadata (ie the timestamp)
+    link = article.locator('a[href*="/COIceconditions/posts/"]').first
 
-    # for up to 25 links, identify link details
-    for i in range(min(links.count(), 25)):
-        link = links.nth(i)
-
-        try:
-            link_text = link.inner_text(timeout=1000).strip()
-        except Exception:
-            link_text = ""
-
-        try:
-            href = link.get_attribute("href")
-            if "/COIceconditions/posts/" in href:
-                metadata = extract_metadata(link, href)
-        except Exception:
-            href = None
-
-        try:
-            aria_label = link.get_attribute("aria-label")
-        except Exception:
-            aria_label = None
-
-        link_info.append({
-            "text": link_text,
-            "href": href,
-            "aria_label": aria_label,
-        })
-    
-    return metadata
-
-def extract_metadata(link, href):
-
-    # Get params to extract comment ID
+    # Get comment ID
+    href = link.get_attribute("href")
     parsed = urlparse(href)
     params = parse_qs(parsed.query)
 
@@ -243,11 +213,5 @@ def extract_metadata(link, href):
         "timestamp": link.get_attribute("aria-label"),
         "comment_id": params.get("comment_id", [None])[0],
     }
-
+    
     return metadata
-
-# link info finds all links in the post
-# then metadata goes trhoguh all the links and finds the one with the real details, extracts those details
-
-# so we never need to see the link info
-# and in fact, can we not go through so many links? anyway to narrow to the corect link right away?
