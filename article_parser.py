@@ -69,6 +69,7 @@ def extract_posts_and_comments(page):
                 posts.append({
                     "type": "post",
                     "timestamp": post_details["timestamp"],
+                    "post_id": post_details["post_id"],
                     "url": post_details["url"],
                     "text": post_details["text"]
                 })
@@ -112,11 +113,14 @@ def extract_post_details(page, timestamp):
     try:
         url = page.url
         text = extract_post_text(page)
+        post_id = extract_post_id(url)
+
     except Exception as e:
-        print(f"Error extracting TEXT/URL from post: {e}")
+        print(f"Error extracting TEXT/URL/ID from post: {e}")
 
     return {
         "timestamp": timestamp,
+        "post_id": post_id,
         "url": url,
         "text": text
     }
@@ -161,6 +165,21 @@ def extract_post_text(page):
     text = dialog_message.inner_text(timeout=3000).strip()
 
     return text
+
+
+def extract_post_id(url):
+
+    # Parse URL
+    parsed = urlparse(url)
+    path_parts = parsed.path.strip("/").split("/")
+
+    post_id = None
+
+    # Confirm that post is post, ie has post_id
+    if len(path_parts) >= 3 and path_parts[-2] == "posts":
+        post_id = path_parts[-1]
+
+    return post_id
 
 
 def extract_comments(page, post_url):
