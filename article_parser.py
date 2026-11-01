@@ -49,11 +49,11 @@ def extract_posts_and_comments(page):
 
                 ## timestamp, opening
                 timestamp = None
-                timestamp_link = locate_timestamp_link(next_message)
+                timestamp_link = locate_post_timestamp_link(next_message)
             
                 # Extract timestamp from tooltip
                 try:
-                    timestamp = extract_timestamp(timestamp_link, page)
+                    timestamp = extract_post_timestamp(timestamp_link, page)
                 except Exception as e:
                     print(f"Error extracting TIMESTAMP from post: {e}")
             
@@ -61,11 +61,11 @@ def extract_posts_and_comments(page):
                 dialog_opened = False
 
                 # Open dialog and update flag
-                open_dialog(page, timestamp_link)
+                open_post_window(page, timestamp_link)
                 dialog_opened = True
 
                 # POST DETAILS
-                post_details = extract_post_details(page, next_message, timestamp)
+                post_details = extract_post_details(page, timestamp)
                 posts.append({
                     "type": "post",
                     "timestamp": post_details["timestamp"],
@@ -84,7 +84,7 @@ def extract_posts_and_comments(page):
                 # Close dialog if opened
                 if dialog_opened:
                     try:
-                        close_dialog(page)
+                        close_post_window(page)
                     except Exception as e:
                         print(f"Error closing dialog: {e}")
                         raise
@@ -103,8 +103,7 @@ def extract_posts_and_comments(page):
 
     return posts, comments
 
-## remove message parameters
-def extract_post_details(page, message, timestamp):
+def extract_post_details(page, timestamp):
 
     text = None
     url = None
@@ -122,8 +121,8 @@ def extract_post_details(page, message, timestamp):
         "text": text
     }
 
-# maybe rename to post link?
-def locate_timestamp_link(message):
+
+def locate_post_timestamp_link(message):
 
     container = message.locator("xpath=../../../..")
     header = container.locator("xpath=./*").nth(1)
@@ -131,8 +130,7 @@ def locate_timestamp_link(message):
 
     return timestamp_link
 
-# rename to be post specific...
-def extract_timestamp(timestamp_link, page):
+def extract_post_timestamp(timestamp_link, page):
     # Hover over the timestamp link and get timestamp
     timestamp_link.hover(timeout=3000)
     page.wait_for_timeout(1000)
@@ -143,12 +141,12 @@ def extract_timestamp(timestamp_link, page):
     return timestamp
 
 
-def open_dialog(page, timestamp_link):
+def open_post_window(page, timestamp_link):
     timestamp_link.click()
     page.wait_for_timeout(1500)
 
     
-def close_dialog(page):
+def close_post_window(page):
     page.go_back()
     page.wait_for_timeout(1500)
 
@@ -185,11 +183,11 @@ def extract_comments(page, post_url):
             # Extract comment text
             text = possible_comments.first.inner_text(timeout=1000).strip()
 
+            if not text:
+                continue
+
         except Exception as e:
             print(f"Error extracting comment text: {e}")
-            continue
-
-        if not text:
             continue
 
         # get metadata from links
