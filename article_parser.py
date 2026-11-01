@@ -187,9 +187,9 @@ def extract_comments(page, post_url):
         comment_details = extract_comment_details(article)
 
         comments.append({
-            "type": comment_details["type"],
-            "timestamp": comment_details["timestamp"],
+            "type": "comment",
             "post_url": post_url,
+            "timestamp": comment_details["timestamp"],
             "comment_id": comment_details["comment_id"],
             "text": text, ## string of text from inner_text of the article
         })
@@ -209,7 +209,6 @@ def extract_comment_details(article):
     params = parse_qs(parsed.query)
 
     metadata = {
-        "type": "comment",
         "timestamp": link.get_attribute("aria-label"),
         "comment_id": params.get("comment_id", [None])[0],
     }
