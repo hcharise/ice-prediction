@@ -103,7 +103,7 @@ def extract_posts_and_comments(page):
 
     return posts, comments
 
-
+## remove message parameters
 def extract_post_details(page, message, timestamp):
 
     text = None
@@ -131,7 +131,7 @@ def locate_timestamp_link(message):
 
     return timestamp_link
 
-
+# rename to be post specific...
 def extract_timestamp(timestamp_link, page):
     # Hover over the timestamp link and get timestamp
     timestamp_link.hover(timeout=3000)
@@ -164,6 +164,7 @@ def extract_post_text(page):
 
     return text
 
+
 def extract_comments(page, post_url):
     comments = []
 
@@ -176,8 +177,16 @@ def extract_comments(page, post_url):
         article = articles.nth(i)
 
         try:
-            text = article.inner_text(timeout=1000).strip()
-        except Exception:
+            # Find article elements that contain actual comments
+            possible_comments = article.locator('span[dir="auto"][lang="en"]')
+            if possible_comments.count() == 0:
+                continue
+
+            # Extract comment text
+            text = possible_comments.first.inner_text(timeout=1000).strip()
+
+        except Exception as e:
+            print(f"Error extracting comment text: {e}")
             continue
 
         if not text:
@@ -186,13 +195,16 @@ def extract_comments(page, post_url):
         # get metadata from links
         comment_details = extract_comment_details(article)
 
-        comments.append({
-            "type": "comment",
-            "post_url": post_url,
-            "timestamp": comment_details["timestamp"],
-            "comment_id": comment_details["comment_id"],
-            "text": text, ## string of text from inner_text of the article
-        })
+        try:
+            comments.append({
+                "type": "comment",
+                "post_url": post_url,
+                "timestamp": comment_details["timestamp"],
+                "comment_id": comment_details["comment_id"],
+                "text": text, ## string of text from inner_text of the article
+            })
+        except Exception as e:
+            print(f"Error appending comments: {e}")
 
     ## NEED to add scrolling here/somewhere to capture all posts
     return comments
