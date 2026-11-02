@@ -66,13 +66,7 @@ def extract_posts_and_comments(page):
 
                 # POST DETAILS
                 post_details = extract_post_details(page, timestamp)
-                posts.append({
-                    "type": "post",
-                    "timestamp": post_details["timestamp"],
-                    "post_id": post_details["post_id"],
-                    "url": post_details["url"],
-                    "text": post_details["text"]
-                })
+                posts.append(post_details)
 
                 # COMMENT DETAILS
                 post_comments = extract_comments(page, post_details["post_id"])
@@ -119,6 +113,7 @@ def extract_post_details(page, timestamp):
         print(f"Error extracting TEXT/URL/ID from post: {e}")
 
     return {
+        "type": "post",
         "timestamp": timestamp,
         "post_id": post_id,
         "url": url,
