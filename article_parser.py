@@ -182,7 +182,6 @@ def extract_post_id(url):
 
 def extract_comments(page, post_id):
     SCROLL_MAX = 3 # max scrolls if no new posts are found
-    COMMENTS_MAX = 20
     processed_keys = set() # stores keys from posts already processed to avoid duplication
     scroll_attempts = 0
 
@@ -192,7 +191,7 @@ def extract_comments(page, post_id):
     dialog = page.locator('[role="dialog"][aria-modal="true"]')
     articles = dialog.locator('[role="article"]')
 
-    while scroll_attempts < SCROLL_MAX and len(comments) < COMMENTS_MAX:
+    while scroll_attempts < SCROLL_MAX:
 
         next_comment = None
         next_key = None
