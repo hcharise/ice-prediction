@@ -84,6 +84,7 @@ def extract_posts_and_comments(page):
                         print(f"Error closing dialog: {e}")
                         raise
 
+            # may not be necessary?
             page.wait_for_timeout(1500)
 
             # Reset scrolls to 0 to find new next post
@@ -100,8 +101,10 @@ def extract_posts_and_comments(page):
 
 def extract_post_details(page, timestamp):
 
+    # Initialize
     text = None
     url = None
+    post_id = None
 
     # Extract url and text
     try:
@@ -146,7 +149,7 @@ def open_post_window(page, timestamp_link):
 
     
 def close_post_window(page):
-    page.go_back()
+    page.go_back(timeout=5000)
     page.wait_for_timeout(1500)
 
     
@@ -178,47 +181,88 @@ def extract_post_id(url):
 
 
 def extract_comments(page, post_id):
+    SCROLL_MAX = 3 # max scrolls if no new posts are found
+    COMMENTS_MAX = 20
+    processed_keys = set() # stores keys from posts already processed to avoid duplication
+    scroll_attempts = 0
+
     comments = []
 
     # Identify article elements ie comments and replies
-    articles = page.locator('[role="article"]')
-    print(f"Found {articles.count()} possible comments and replies (article elements).")
+    dialog = page.locator('[role="dialog"][aria-modal="true"]')
+    articles = dialog.locator('[role="article"]')
 
-    # Try extracting text and timestamp from each article
-    for i in range(articles.count()):
-        article = articles.nth(i)
+    while scroll_attempts < SCROLL_MAX and len(comments) < COMMENTS_MAX:
 
-        try:
-            # Find article elements that contain actual comments
-            possible_comments = article.locator('span[dir="auto"][lang="en"]')
-            if possible_comments.count() == 0:
+        print(f"Found {articles.count()} possible comments.")
+        next_comment = None
+        next_key = None
+
+        # Try extracting text and timestamp from each article
+        for i in range(articles.count()):
+            try:
+                candidate_article = articles.nth(i)
+
+                candidate_key = candidate_article.inner_text(timeout=1000).strip()[:100]
+
+                if not candidate_key:
+                    continue
+
+                # Check if this article has already been processed
+                if candidate_key not in processed_keys: ## this might not be working???
+                    next_comment = candidate_article
+                    next_key = candidate_key
+                    break
+            except Exception as e:
+                print(f"Error finding next comment: {e}")
+
+        if next_comment is not None:
+            try:
+                # Mark comment as processed
+                processed_keys.add(next_key)
+
+                # Find section of article that contain actual comments
+                comment_text = next_comment.locator('span[dir="auto"][lang="en"]')
+                if comment_text.count() == 0:
+                    print("Continuing bc no comment text)")
+                    continue
+
+                # Extract comment text
+                text = comment_text.first.inner_text(timeout=1000).strip()
+
+                if not text:
+                    continue
+
+            except Exception as e:
+                print(f"Error extracting comment text: {e}")
                 continue
 
-            # Extract comment text
-            text = possible_comments.first.inner_text(timeout=1000).strip()
+            # get metadata from links
+            comment_details = extract_comment_details(next_comment)
 
-            if not text:
-                continue
+            try:
+                comments.append({
+                    "type": "comment",
+                    "post_id": post_id,
+                    "timestamp": comment_details["timestamp"],
+                    "comment_id": comment_details["comment_id"],
+                    "text": text, ## string of text from inner_text of the article
+                })
+            except Exception as e:
+                print(f"Error appending comments: {e}")
 
-        except Exception as e:
-            print(f"Error extracting comment text: {e}")
-            continue
+            # Reset scroll attempts
+            scroll_attempts = 0
+        else:
+            #TESTING - didn't work
+            dialog.hover()
 
-        # get metadata from links
-        comment_details = extract_comment_details(article)
+            # Scroll down on page before repeating loop to see if new articles can be found
+            page.mouse.wheel(0, 500)
+            page.wait_for_timeout(500)
 
-        try:
-            comments.append({
-                "type": "comment",
-                "post_id": post_id,
-                "timestamp": comment_details["timestamp"],
-                "comment_id": comment_details["comment_id"],
-                "text": text, ## string of text from inner_text of the article
-            })
-        except Exception as e:
-            print(f"Error appending comments: {e}")
+            scroll_attempts += 1
 
-    ## NEED to add scrolling here/somewhere to capture all posts
     return comments
 
 # Gets timestamp and comment ID from each comment
