@@ -194,7 +194,6 @@ def extract_comments(page, post_id):
 
     while scroll_attempts < SCROLL_MAX and len(comments) < COMMENTS_MAX:
 
-        print(f"Found {articles.count()} possible comments.")
         next_comment = None
         next_key = None
 
@@ -254,7 +253,7 @@ def extract_comments(page, post_id):
             # Reset scroll attempts
             scroll_attempts = 0
         else:
-            #TESTING - didn't work
+            # Hover mouse on dialog box before scrolling
             dialog.hover()
 
             # Scroll down on page before repeating loop to see if new articles can be found

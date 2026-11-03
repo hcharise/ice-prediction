@@ -57,7 +57,7 @@ def main():
 
         print(f"Saved {len(posts)} posts.")
 
-       # print(f"Saved {len(comments)} comments & replies.")
+        print(f"Saved {len(comments)} comments & replies.")
 
         # CLOSE BROWSER -----------------------------------------------------------------------------------
         # may want to revert to user prompting browser closing in the future
