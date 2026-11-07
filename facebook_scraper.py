@@ -3,12 +3,8 @@ import json
 import time
 from article_parser import extract_posts_and_comments
 
-## To reactivate virutal environment: source .venv/bin/activate
-
-
 PAGE_URL = "https://www.facebook.com/COIceconditions" # facebook URL to retrieve posts from
 PROFILE_DIR = "./facebook_playwright_profile" # save facebook credentials
-SCROLL_COUNT = 1 # number of times script will scroll down on facebook page
 
 def load_page(p):
 
@@ -32,8 +28,7 @@ def load_page(p):
         "\nIf Facebook asks you to log in, log in manually in the browser.\n"
         "Once you can see the Colorado Ice Conditions page, return here."
     )
-    # may want to return to using input instead of sleep to verify loading?
-    # input("Press ENTER after the page is fully visible... ")
+    input("Press ENTER after the page is fully visible... ")
     time.sleep(5)
 
     return page
@@ -60,8 +55,7 @@ def main():
         print(f"Saved {len(comments)} comments.")
 
         # CLOSE BROWSER -----------------------------------------------------------------------------------
-        # may want to revert to user prompting browser closing in the future
-        # input("Press ENTER to close the browser... ")
+        input("Press ENTER to close the browser... ")
         page.context.close()
         print("-----------------------------------------------------------------------------------------------")
 
