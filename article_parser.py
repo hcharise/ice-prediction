@@ -6,7 +6,7 @@ def extract_posts_and_comments(page):
     POSTS_MAX = 5 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
     comments = []
-    found_keys = set() # stores keys from posts already found to avoid duplication
+    found_post_keys = set() # stores keys from posts already found to avoid duplication
     scroll_attempts = 0
     
     # Identify initial set of message elements ie post elements
@@ -22,7 +22,7 @@ def extract_posts_and_comments(page):
         next_key = None
 
         # Search through message_elements currently in DOM, locating next one that has not been processed
-        next_message, next_key = find_next_post(message_elements, found_keys)
+        next_message, next_key = find_next_post(message_elements, found_post_keys)
 
         # EXTRACT POST TEXT & TIMESTAMP -------------------------------------------------------------------
         if next_message is not None:
@@ -48,7 +48,8 @@ def extract_posts_and_comments(page):
 
     return posts, comments
 
-def find_next_post(message_elements, found_keys):
+
+def find_next_post(message_elements, found_post_keys):
     for j in range(message_elements.count()):
         try:
             # Get key from next message_element candidate
@@ -56,18 +57,19 @@ def find_next_post(message_elements, found_keys):
             candidate_key = candidate.inner_text(timeout=1000).strip()[:100]
 
             # If next message_element candidate is new, exit search to extract post
-            if candidate_key not in found_keys:
+            if candidate_key not in found_post_keys:
                 next_message = candidate
                 next_key = candidate_key
 
                 # Mark message as processed before changing the DOM when expanding
-                found_keys.add(next_key)
+                found_post_keys.add(next_key)
                 break
 
         except Exception as e:
             print(f"Error inspecting candidate {j}: {e}")
 
     return next_message, next_key
+
 
 def handle_post_extraction(next_message, page, posts, comments):
     try:
@@ -142,6 +144,7 @@ def locate_post_timestamp_link(message):
 
     return timestamp_link
 
+
 def extract_post_timestamp(timestamp_link, page):
     # Hover over the timestamp link and get timestamp
     timestamp_link.hover(timeout=3000)
@@ -192,7 +195,7 @@ def extract_post_id(url):
 
 def extract_comments(page, post_id):
     SCROLL_MAX = 10 # max scrolls if no new posts are found
-    processed_keys = set() # stores keys from posts already processed to avoid duplication
+    found_comment_keys = set() # stores keys from posts already processed to avoid duplication
     scroll_attempts = 0
 
     comments = []
@@ -204,31 +207,12 @@ def extract_comments(page, post_id):
     while scroll_attempts < SCROLL_MAX:
 
         next_comment = None
-        next_key = None
 
         # Try extracting text and timestamp from each article
-        for i in range(articles.count()):
-            try:
-                candidate_article = articles.nth(i)
-
-                candidate_key = candidate_article.inner_text(timeout=1000).strip()[:100]
-
-                if not candidate_key:
-                    continue
-
-                # Check if this article has already been processed
-                if candidate_key not in processed_keys: ## this might not be working???
-                    next_comment = candidate_article
-                    next_key = candidate_key
-                    break
-            except Exception as e:
-                print(f"Error finding next comment: {e}")
+        next_comment = find_next_comment(articles, found_comment_keys)
 
         if next_comment is not None:
             try:
-                # Mark comment as processed
-                processed_keys.add(next_key)
-
                 # Find section of article that contain actual comments
                 comment_text = next_comment.locator('span[dir="auto"][lang="en"]')
                 if comment_text.count() == 0:
@@ -244,7 +228,7 @@ def extract_comments(page, post_id):
                 print(f"Error extracting comment text: {e}")
                 continue
 
-            # get metadata from links
+            # Get details from comment
             comment_details = extract_comment_details(next_comment)
 
             try:
@@ -271,6 +255,33 @@ def extract_comments(page, post_id):
             scroll_attempts += 1
 
     return comments
+
+
+def find_next_comment(articles, found_comment_keys):
+    # Search through visible comments
+    for i in range(articles.count()):
+        try:
+       
+            # Get next article element and its key
+            candidate_article = articles.nth(i)
+            candidate_key = candidate_article.inner_text(timeout=1000).strip()[:100]
+
+            if not candidate_key:
+                continue
+
+            # Check if this article has already been found, if not, use it
+            if candidate_key not in found_comment_keys:
+                next_comment = candidate_article
+                next_key = candidate_key
+
+                # Mark comment as found
+                found_comment_keys.add(next_key)
+
+                break
+        except Exception as e:
+            print(f"Error finding next comment: {e}")
+
+    return next_comment
 
 # Gets timestamp and comment ID from each comment
 def extract_comment_details(article):
