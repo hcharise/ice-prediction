@@ -3,7 +3,7 @@ from urllib.parse import urlparse, parse_qs
 
 def extract_posts_and_comments(page):
     SCROLL_MAX = 10 # max scrolls if no new posts are found
-    POSTS_MAX = 1 # maximum number of posts to be retrieved (what ultimately ends the looping)
+    POSTS_MAX = 5 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
     comments = []
     processed_keys = set() # stores keys from posts already processed to avoid duplication
@@ -22,20 +22,7 @@ def extract_posts_and_comments(page):
         next_key = None
 
         # Search through message_elements currently in DOM, locating next one that has not been processed
-        for j in range(message_elements.count()):
-            try:
-                # Get key from next message_element candidate
-                candidate = message_elements.nth(j)
-                candidate_key = candidate.inner_text(timeout=1000).strip()[:100]
-
-                # If next message_element candidate is new, exit search to extract post
-                if candidate_key not in processed_keys:
-                    next_message = candidate
-                    next_key = candidate_key
-                    break
-
-            except Exception as e:
-                print(f"Error inspecting candidate {j}: {e}")
+        next_message, next_key = find_next_post(message_elements, processed_keys)
 
         # EXTRACT POST TEXT & TIMESTAMP -------------------------------------------------------------------
         if next_message is not None:
@@ -98,6 +85,24 @@ def extract_posts_and_comments(page):
             scroll_attempts += 1
 
     return posts, comments
+
+def find_next_post(message_elements, processed_keys):
+    for j in range(message_elements.count()):
+        try:
+            # Get key from next message_element candidate
+            candidate = message_elements.nth(j)
+            candidate_key = candidate.inner_text(timeout=1000).strip()[:100]
+
+            # If next message_element candidate is new, exit search to extract post
+            if candidate_key not in processed_keys:
+                next_message = candidate
+                next_key = candidate_key
+                break
+
+        except Exception as e:
+            print(f"Error inspecting candidate {j}: {e}")
+
+    return next_message, next_key
 
 def extract_post_details(page, timestamp):
 
@@ -181,7 +186,7 @@ def extract_post_id(url):
 
 
 def extract_comments(page, post_id):
-    SCROLL_MAX = 3 # max scrolls if no new posts are found
+    SCROLL_MAX = 10 # max scrolls if no new posts are found
     processed_keys = set() # stores keys from posts already processed to avoid duplication
     scroll_attempts = 0
 
@@ -222,7 +227,6 @@ def extract_comments(page, post_id):
                 # Find section of article that contain actual comments
                 comment_text = next_comment.locator('span[dir="auto"][lang="en"]')
                 if comment_text.count() == 0:
-                    print("Continuing bc no comment text)")
                     continue
 
                 # Extract comment text
