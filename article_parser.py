@@ -1,11 +1,12 @@
 import re
 from urllib.parse import urlparse, parse_qs
 
-def extract_posts(page):
+def extract_posts_and_comments(page):
     SCROLL_MAX = 10 # max scrolls if no new posts are found
-    POSTS_MAX = 10 # maximum number of posts to be retrieved (what ultimately ends the looping)
+    POSTS_MAX = 5 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
-    processed_keys = set() # stores keys from posts already processed to avoid duplication
+    comments = []
+    found_post_keys = set() # stores keys from posts already found to avoid duplication
     scroll_attempts = 0
     
     # Identify initial set of message elements ie post elements
@@ -16,45 +17,20 @@ def extract_posts(page):
     # Scroll through posts, extracting text and date from each
     while scroll_attempts < SCROLL_MAX and len(posts) < POSTS_MAX:
 
-        # LOCATE NEXT POST --------------------------------------------------------------------------------
-        next_message = None
-        next_key = None
-
         # Search through message_elements currently in DOM, locating next one that has not been processed
-        for j in range(message_elements.count()):
-            try:
-                # Get key from next message_element candidate
-                candidate = message_elements.nth(j)
-                candidate_text = candidate.inner_text(timeout=1000).strip()
-                candidate_key = candidate_text[:100]
-
-                # If next message_element candidate is new, exit search to extract post
-                if candidate_key not in processed_keys:
-                    next_message = candidate
-                    next_key = candidate_key
-                    break
-
-            except Exception as e:
-                print(f"Error inspecting candidate {j}: {e}")
+        next_message, next_key = find_next_post(message_elements, found_post_keys)
 
         # EXTRACT POST TEXT & TIMESTAMP -------------------------------------------------------------------
         if next_message is not None:
 
-            # Mark message as processed before changing the DOM when expanding
-            processed_keys.add(next_key)
+            # Confirm that Playwright is on the correct post still
+            # is this still necessary?
+            next_message = message_elements.filter(has_text=next_key).first
 
-            # GET POST TEXT -------------------------------------------------------------------------------
-            text = extract_post_text(message_elements, next_message, next_key)
+            handle_post_extraction(next_message, page, posts, comments)
 
-            # GET POST TIMESTAMP --------------------------------------------------------------------------
-            timestamp = extract_post_timestamp(page, next_message)
-
-            # Write post info back to posts list
-            posts.append({
-                "type": "post",
-                "timestamp": timestamp,
-                "text": text,
-            })
+            # may not be necessary?
+            page.wait_for_timeout(1500)
 
             # Reset scrolls to 0 to find new next post
             scroll_attempts = 0
@@ -66,176 +42,268 @@ def extract_posts(page):
 
             scroll_attempts += 1
 
-    return posts
+    return posts, comments
 
-def extract_post_text(message_elements, message, key):
+
+def find_next_post(message_elements, found_post_keys):
+
+    next_message = None
+    next_key = None
+
+    for j in range(message_elements.count()):
+        try:
+            # Get key from next message_element candidate
+            candidate = message_elements.nth(j)
+            candidate_key = candidate.inner_text(timeout=1000).strip()[:100]
+
+            # If next message_element candidate is new, exit search to extract post
+            if candidate_key not in found_post_keys:
+                next_message = candidate
+                next_key = candidate_key
+
+                # Mark message as processed before changing the DOM when expanding
+                found_post_keys.add(next_key)
+                break
+
+        except Exception as e:
+            print(f"Error inspecting candidate {j}: {e}")
+
+    return next_message, next_key
+
+
+def handle_post_extraction(next_message, page, posts, comments):
     try:
-        # Extract visible text from post
-        text = message.inner_text(timeout=3000).strip()
+        ## timestamp, opening
+        timestamp = None
+        timestamp_link = locate_post_timestamp_link(next_message)
 
-        # Check if post has additional text, ie has a "See more" button
-        if "See more" in text:
-            try:
-                # Click "See more" button to expand text
-                message.get_by_role("button", name="See more").click(timeout=3000)
+        # Extract timestamp from tooltip
+        try:
+            timestamp = extract_post_timestamp(timestamp_link, page)
+        except Exception as e:
+            print(f"Error extracting TIMESTAMP from post: {e}")
 
-                # Relocate the same post again (its index may have changed after expanding)
-                message = message_elements.filter(has_text=key).first
+        # Flag if dialog box is opened
+        dialog_opened = False
 
-                # Re-extract full text
-                text = message.inner_text(timeout=3000).strip()
-                
-            except Exception as e:
-                print(f"Error expanding additional text from post: {e}")
+        # Open dialog and update flag
+        open_post_window(page, timestamp_link)
+        dialog_opened = True
+
+        # POST DETAILS
+        post_details = extract_post_details(page, timestamp)
+        posts.append(post_details)
+
+        # COMMENT DETAILS
+        post_comments = extract_comments(page, post_details["post_id"])
+        comments.extend(post_comments)
 
     except Exception as e:
-        text = None
-        print(f"Error extracting text from post: {e}")
+        print(f"Error extracting post: {e}")
 
-    return text
+    finally:
+        # Close dialog if opened
+        if dialog_opened:
+            try:
+                close_post_window(page)
+            except Exception as e:
+                print(f"Error closing dialog: {e}")
+                raise
 
-def extract_post_timestamp(page, message):
+
+def extract_post_details(page, timestamp):
+
+    # Initialize
+    text = None
+    url = None
+    post_id = None
+
+    # Extract url and text
     try:
-        # Locate timestamp link
-        container = message.locator("xpath=../../../..")
-        header = container.locator("xpath=./*").nth(1)
-        timestamp_link = header.locator("a").nth(2)
+        url = page.url
+        text = extract_post_text(page)
+        post_id = extract_post_id(url)
 
-        # Hover over the timestamp link to get tooltop
-        timestamp_link.hover(timeout=3000)
-        page.wait_for_timeout(1000)
+    except Exception as e:
+        print(f"Error extracting TEXT/URL/ID from post: {e}")
 
-        # Get timestamp from tooltip
-        tooltips = page.locator('[role="tooltip"]')
-        timestamp = tooltips.first.inner_text(timeout=1000).strip()
-        # could add a layer of validation here - is what we got actually a date/time?
+    return {
+        "type": "post",
+        "timestamp": timestamp,
+        "post_id": post_id,
+        "url": url,
+        "text": text
+    }
 
-    except Exception as e: # eventually add specific error handling - playwright timeout?
-        timestamp = None
-        print(f"Error extracting timestamp from post {j}: {e}")
+
+def locate_post_timestamp_link(message):
+
+    container = message.locator("xpath=../../../..")
+    header = container.locator("xpath=./*").nth(1)
+    timestamp_link = header.locator("a").nth(2)
+
+    return timestamp_link
+
+
+def extract_post_timestamp(timestamp_link, page):
+    # Hover over the timestamp link and get timestamp
+    timestamp_link.hover(timeout=3000)
+    page.wait_for_timeout(1000)
+    tooltips = page.locator('[role="tooltip"]')
+    timestamp = tooltips.first.inner_text(timeout=1000).strip()
+    # could add a layer of validation here - is what we got actually a date/time?
 
     return timestamp
 
-def extract_comments(page):
+
+def open_post_window(page, timestamp_link):
+    timestamp_link.click()
+    page.wait_for_timeout(1500)
+
+    
+def close_post_window(page):
+    page.go_back(timeout=5000)
+    page.wait_for_timeout(1500)
+
+    
+def extract_post_text(page):
+
+    # Extract text
+    dialog = page.get_by_role("dialog")
+    dialog_message = dialog.locator(
+        '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+    )
+    text = dialog_message.inner_text(timeout=3000).strip()
+
+    return text
+
+
+def extract_post_id(url):
+
+    # Parse URL
+    parsed = urlparse(url)
+    path_parts = parsed.path.strip("/").split("/")
+
+    post_id = None
+
+    # Confirm that post is post, ie has post_id
+    if len(path_parts) >= 3 and path_parts[-2] == "posts":
+        post_id = path_parts[-1]
+
+    return post_id
+
+
+def extract_comments(page, post_id):
+    SCROLL_MAX = 10 # max scrolls if no new posts are found
+    found_comment_keys = set() # stores keys from posts already processed to avoid duplication
+    scroll_attempts = 0
+
     comments = []
 
     # Identify article elements ie comments and replies
-    articles = page.locator('[role="article"]')
-    print(f"Found {articles.count()} article elements")
+    dialog = page.locator('[role="dialog"][aria-modal="true"]')
+    articles = dialog.locator('[role="article"]')
 
-    # Try extracting text and timestamp from each article
-    for i in range(articles.count()):
-        article = articles.nth(i)
+    while scroll_attempts < SCROLL_MAX:
 
-        try:
-            text = article.inner_text(timeout=1000).strip()
-        except Exception:
-            continue
+        # Try extracting text and timestamp from each article
+        next_comment = find_next_comment(articles, found_comment_keys)
 
-        if not text:
-            continue
+        if next_comment is not None:
 
-        link_info = extract_links(article)
-        metadata = extract_metadata(link_info)
+            handle_comment_extraction(next_comment, comments, post_id)
+            
+            # Reset scroll attempts
+            scroll_attempts = 0
+        else:
+            # Hover mouse on dialog box before scrolling
+            dialog.hover()
 
-        comments.append({
-            "type": metadata["type"],
-            "timestamp": metadata["timestamp"],
-            "post_url": metadata["post_url"],
-            "comment_id": metadata["comment_id"],
-            "reply_comment_id": metadata["reply_comment_id"],
-            "text": text,
-            "links": link_info
-        })
+            # Scroll down on page before repeating loop to see if new articles can be found
+            page.mouse.wheel(0, 500)
+            page.wait_for_timeout(500)
+
+            scroll_attempts += 1
 
     return comments
 
-def extract_links(article):
 
-    links = article.locator("a")
-    link_info = []
+def find_next_comment(articles, found_comment_keys):
 
-    for i in range(min(links.count(), 25)):
-        link = links.nth(i)
+    next_comment = None
+    next_key = None
 
+    # Search through visible comments
+    for i in range(articles.count()):
         try:
-            link_text = link.inner_text(timeout=1000).strip()
-        except Exception:
-            link_text = ""
+       
+            # Get next article element and its key
+            candidate_article = articles.nth(i)
+            candidate_key = candidate_article.inner_text(timeout=1000).strip()[:100]
 
-        try:
-            href = link.get_attribute("href")
-        except Exception:
-            href = None
+            if not candidate_key:
+                continue
 
-        try:
-            aria_label = link.get_attribute("aria-label")
-        except Exception:
-            aria_label = None
+            # Check if this article has already been found, if not, use it
+            if candidate_key not in found_comment_keys:
+                next_comment = candidate_article
+                next_key = candidate_key
+
+                # Mark comment as found
+                found_comment_keys.add(next_key)
+
+                break
+        except Exception as e:
+            print(f"Error finding next comment: {e}")
+
+    return next_comment
 
 
-        if (
-            re.fullmatch(r"\d+[smhdwy]", link_text)
-            or "facebook.com" in (href or "")
-            or aria_label
-        ):
-            link_info.append({
-                "text": link_text,
-                "href": href,
-                "aria_label": aria_label,
-            })
-    
-    return link_info
+def handle_comment_extraction(next_comment, comments, post_id):
+    try:
+        # Find section of article that contain actual comments
+        comment_text = next_comment.locator('span[dir="auto"][lang="en"]')
+        if comment_text.count() == 0:
+            return
 
-def extract_metadata(link_info):
+        # Extract comment text
+        text = comment_text.first.inner_text(timeout=1000).strip()
+
+        if not text:
+            return
+
+    except Exception as e:
+        print(f"Error extracting comment text: {e}")
+        return
+
+    # Get details from comment
+    comment_details = extract_comment_details(next_comment)
+
+    try:
+        comments.append({
+            "type": "comment",
+            "post_id": post_id,
+            "timestamp": comment_details["timestamp"],
+            "comment_id": comment_details["comment_id"],
+            "text": text, ## string of text from inner_text of the article
+        })
+    except Exception as e:
+        print(f"Error appending comments: {e}")
+
+# Gets timestamp and comment ID from each comment
+def extract_comment_details(article):
+
+    # Identify link on comment that contains metadata (ie the timestamp)
+    link = article.locator('a[href*="/COIceconditions/posts/"]').first
+
+    # Get comment ID
+    href = link.get_attribute("href")
+    parsed = urlparse(href)
+    params = parse_qs(parsed.query)
 
     metadata = {
-            "type": "unknown",
-            "timestamp": None,
-            "post_url": None,
-            "comment_id": None,
-            "reply_comment_id": None,
-        }
-
-    for link in link_info:
-        href = link.get("href") or ""
-
-        if "/COIceconditions/posts/" not in href:
-            continue
-
-        parsed = urlparse(href)
-        params = parse_qs(parsed.query)
-
-        clean_post_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
-
-        if "reply_comment_id" in params:
-            metadata = {
-                "type": "reply",
-                "timestamp": link.get("aria_label"),
-                "post_url": clean_post_url,
-                "comment_id": params.get("comment_id", [None])[0],
-                "reply_comment_id": params.get("reply_comment_id", [None])[0],
-            }
-            break
-
-        elif "comment_id" in params:
-            metadata = {
-                "type": "comment",
-                "timestamp": link.get("aria_label"),
-                "post_url": clean_post_url,
-                "comment_id": params.get("comment_id", [None])[0],
-                "reply_comment_id": None,
-            }
-            break
-
-        else:
-            metadata = {
-                "type": "unknown",
-                "timestamp": link.get("aria_label"),
-                "post_url": clean_post_url,
-                "comment_id": None,
-                "reply_comment_id": None,
-            }
-            break
-
+        "timestamp": link.get_attribute("aria-label"),
+        "comment_id": params.get("comment_id", [None])[0],
+    }
+    
     return metadata

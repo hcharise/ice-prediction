@@ -1,7 +1,10 @@
 from playwright.sync_api import sync_playwright
 import json
 import time
-from article_parser import extract_comments, extract_posts
+from article_parser import extract_posts_and_comments
+
+## To reactivate virutal environment: source .venv/bin/activate
+
 
 PAGE_URL = "https://www.facebook.com/COIceconditions" # facebook URL to retrieve posts from
 PROFILE_DIR = "./facebook_playwright_profile" # save facebook credentials
@@ -33,35 +36,33 @@ def load_page(p):
     # input("Press ENTER after the page is fully visible... ")
     time.sleep(5)
 
-    return page, context
+    return page
 
 def main():
     with sync_playwright() as p:
 
-        page, context = load_page(p)
+        page = load_page(p)
 
         # EXTRACT POSTS & COMMENTS/REPLIES ----------------------------------------------------------------
         posts = [] # stores main posts
-        posts = extract_posts(page)
-
         comments = [] # stores comments & replies
-        comments = extract_comments(page)
+        posts, comments = extract_posts_and_comments(page)
 
         # Save found posts/comments/replies to JSON
         with open("facebook_posts.json", "w", encoding="utf-8") as f:
             json.dump(posts, f, indent=2, ensure_ascii=False)
 
-        with open("facebook_comments&replies.json", "w", encoding="utf-8") as f:
+        with open("facebook_comments.json", "w", encoding="utf-8") as f:
             json.dump(comments, f, indent=2, ensure_ascii=False)
 
-        print(f"Saved {len(posts)} posts for inspection")
+        print(f"Saved {len(posts)} posts.")
 
-        print(f"Saved {len(comments)} comments & replies for inspection")
+        print(f"Saved {len(comments)} comments.")
 
         # CLOSE BROWSER -----------------------------------------------------------------------------------
         # may want to revert to user prompting browser closing in the future
         # input("Press ENTER to close the browser... ")
-        context.close()
+        page.context.close()
         print("-----------------------------------------------------------------------------------------------")
 
 if __name__ == "__main__":
