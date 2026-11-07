@@ -1,0 +1,17 @@
+
+[
+  {
+    "type": "post",
+    "timestamp": "Saturday, January 17, 2026 at 9:00 AM",
+    "post_id": "sample_post_001",
+    "url": "https://www.facebook.com/COIceconditions/posts/sample_post_001",
+    "text": "Weekly ice conditions update! Where did you fish this weekend? Share your ice measurements and shoreline conditions."
+  },
+  {
+    "type": "post",
+    "timestamp": "Saturday, January 24, 2026 at 9:00 AM",
+    "post_id": "sample_post_002",
+    "url": "https://www.facebook.com/COIceconditions/posts/sample_post_002",
+    "text": "Recent ice reports:\nAntero Reservoir - 8-10 inches\nGeorgetown Lake - 12 inches near the east shore\nChatfield Reservoir - Open water near the inlet\nPlease check conditions before heading out."
+  }
+]

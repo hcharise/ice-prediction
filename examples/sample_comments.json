@@ -1,0 +1,24 @@
+
+[
+  {
+    "type": "comment",
+    "post_id": "sample_post_001",
+    "timestamp": "Saturday, January 17, 2026 at 11:30 AM",
+    "comment_id": "sample_comment_001",
+    "text": "Fished Antero yesterday. Measured 9 inches of ice near the south shore."
+  },
+  {
+    "type": "comment",
+    "post_id": "sample_post_001",
+    "timestamp": "Sunday, January 18, 2026 at 8:15 AM",
+    "comment_id": "sample_comment_002",
+    "text": "Georgetown had about 11 inches near the boat launch on Saturday. Some snow on top."
+  },
+  {
+    "type": "comment",
+    "post_id": "sample_post_002",
+    "timestamp": "Saturday, January 24, 2026 at 2:45 PM",
+    "comment_id": "sample_comment_003",
+    "text": "Checked Chatfield this morning. Shoreline ice looked unstable, so we stayed off."
+  }
+]
