@@ -6,7 +6,7 @@ def extract_posts_and_comments(page):
     POSTS_MAX = 5 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
     comments = []
-    processed_keys = set() # stores keys from posts already processed to avoid duplication
+    found_keys = set() # stores keys from posts already found to avoid duplication
     scroll_attempts = 0
     
     # Identify initial set of message elements ie post elements
@@ -22,54 +22,16 @@ def extract_posts_and_comments(page):
         next_key = None
 
         # Search through message_elements currently in DOM, locating next one that has not been processed
-        next_message, next_key = find_next_post(message_elements, processed_keys)
+        next_message, next_key = find_next_post(message_elements, found_keys)
 
         # EXTRACT POST TEXT & TIMESTAMP -------------------------------------------------------------------
         if next_message is not None:
-            try:
 
-                # Mark message as processed before changing the DOM when expanding
-                processed_keys.add(next_key)
+            # Confirm that Playwright is on the correct post still
+            # is this still necessary?
+            next_message = message_elements.filter(has_text=next_key).first
 
-                # Confirm that Playwright is on the correct post still
-                next_message = message_elements.filter(has_text=next_key).first
-
-                ## timestamp, opening
-                timestamp = None
-                timestamp_link = locate_post_timestamp_link(next_message)
-            
-                # Extract timestamp from tooltip
-                try:
-                    timestamp = extract_post_timestamp(timestamp_link, page)
-                except Exception as e:
-                    print(f"Error extracting TIMESTAMP from post: {e}")
-            
-                # Flag if dialog box is opened
-                dialog_opened = False
-
-                # Open dialog and update flag
-                open_post_window(page, timestamp_link)
-                dialog_opened = True
-
-                # POST DETAILS
-                post_details = extract_post_details(page, timestamp)
-                posts.append(post_details)
-
-                # COMMENT DETAILS
-                post_comments = extract_comments(page, post_details["post_id"])
-                comments.extend(post_comments)
-
-            except Exception as e:
-                print(f"Error extracting post: {e}")
-
-            finally:
-                # Close dialog if opened
-                if dialog_opened:
-                    try:
-                        close_post_window(page)
-                    except Exception as e:
-                        print(f"Error closing dialog: {e}")
-                        raise
+            handle_post_extraction(next_message, page, posts, comments)
 
             # may not be necessary?
             page.wait_for_timeout(1500)
@@ -86,7 +48,7 @@ def extract_posts_and_comments(page):
 
     return posts, comments
 
-def find_next_post(message_elements, processed_keys):
+def find_next_post(message_elements, found_keys):
     for j in range(message_elements.count()):
         try:
             # Get key from next message_element candidate
@@ -94,15 +56,58 @@ def find_next_post(message_elements, processed_keys):
             candidate_key = candidate.inner_text(timeout=1000).strip()[:100]
 
             # If next message_element candidate is new, exit search to extract post
-            if candidate_key not in processed_keys:
+            if candidate_key not in found_keys:
                 next_message = candidate
                 next_key = candidate_key
+
+                # Mark message as processed before changing the DOM when expanding
+                found_keys.add(next_key)
                 break
 
         except Exception as e:
             print(f"Error inspecting candidate {j}: {e}")
 
     return next_message, next_key
+
+def handle_post_extraction(next_message, page, posts, comments):
+    try:
+        ## timestamp, opening
+        timestamp = None
+        timestamp_link = locate_post_timestamp_link(next_message)
+
+        # Extract timestamp from tooltip
+        try:
+            timestamp = extract_post_timestamp(timestamp_link, page)
+        except Exception as e:
+            print(f"Error extracting TIMESTAMP from post: {e}")
+
+        # Flag if dialog box is opened
+        dialog_opened = False
+
+        # Open dialog and update flag
+        open_post_window(page, timestamp_link)
+        dialog_opened = True
+
+        # POST DETAILS
+        post_details = extract_post_details(page, timestamp)
+        posts.append(post_details)
+
+        # COMMENT DETAILS
+        post_comments = extract_comments(page, post_details["post_id"])
+        comments.extend(post_comments)
+
+    except Exception as e:
+        print(f"Error extracting post: {e}")
+
+    finally:
+        # Close dialog if opened
+        if dialog_opened:
+            try:
+                close_post_window(page)
+            except Exception as e:
+                print(f"Error closing dialog: {e}")
+                raise
+
 
 def extract_post_details(page, timestamp):
 
