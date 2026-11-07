@@ -17,10 +17,6 @@ def extract_posts_and_comments(page):
     # Scroll through posts, extracting text and date from each
     while scroll_attempts < SCROLL_MAX and len(posts) < POSTS_MAX:
 
-        # LOCATE NEXT POST --------------------------------------------------------------------------------
-        next_message = None
-        next_key = None
-
         # Search through message_elements currently in DOM, locating next one that has not been processed
         next_message, next_key = find_next_post(message_elements, found_post_keys)
 
@@ -50,6 +46,10 @@ def extract_posts_and_comments(page):
 
 
 def find_next_post(message_elements, found_post_keys):
+
+    next_message = None
+    next_key = None
+
     for j in range(message_elements.count()):
         try:
             # Get key from next message_element candidate
@@ -206,8 +206,6 @@ def extract_comments(page, post_id):
 
     while scroll_attempts < SCROLL_MAX:
 
-        next_comment = None
-
         # Try extracting text and timestamp from each article
         next_comment = find_next_comment(articles, found_comment_keys)
 
@@ -258,6 +256,10 @@ def extract_comments(page, post_id):
 
 
 def find_next_comment(articles, found_comment_keys):
+
+    next_comment = None
+    next_key = None
+
     # Search through visible comments
     for i in range(articles.count()):
         try:
