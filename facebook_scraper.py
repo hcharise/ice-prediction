@@ -26,9 +26,9 @@ def load_page(p):
     # Log into Facebook
     print(
         "\nIf Facebook asks you to log in, log in manually in the browser.\n"
-        "Once you can see the Colorado Ice Conditions page, return here."
+        "Additional authentication/CAPTCHAs may be required.\n"
     )
-    input("Press ENTER after the page is fully visible... ")
+    input("Press ENTER once the Colorado Ice Conditions page is fully visible... ")
     time.sleep(5)
 
     return page
