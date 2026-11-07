@@ -92,6 +92,17 @@ The scraper generates two JSON files in the project directory:
 
 These files provide the raw data for subsequent processing, including identifying lake names, observation dates, and reported ice thickness.
 
+### Example Data
+
+The [`examples/`](examples/) directory contains small, synthetic JSON datasets demonstrating the scraper's output structure.
+
+- [`sample_posts.json`](examples/sample_posts.json) — Example Facebook post records.
+- [`sample_comments.json`](examples/sample_comments.json) — Example comment records associated with those posts.
+
+These examples use fictional content and identifiers to demonstrate the data format without publishing actual Facebook user information.
+
+Raw scraped data is excluded from version control.
+
 ## Project Roadmap
 
 - [x] Implement initial post extraction
