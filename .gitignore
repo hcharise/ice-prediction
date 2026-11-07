@@ -1,10 +1,12 @@
 
+# GENERAL
+.DS_Store
+.venv/
+__pycache__/
+
 # FACEBOOK LOGIN DATA
 facebook_playwright_profile/
 
 # JSON OUTPUT FILES
 facebook_posts.json
 facebook_comments.json
-
-# OTHER
-.DS_Store
