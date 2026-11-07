@@ -9,20 +9,20 @@ Ice thickness is influenced by weather conditions, but reliable historical ice m
 
 The project is being developed in stages, beginning with a Python-based web scraper to collect ice reports from a public Facebook page.
 
-## Current Implementation: Data Collection
+### Current Status and Limitations
 
-**Status: Functional prototype — debugging and refactoring in progress**
+**Status:** Initial data collection implemented and manually validated. Reliability improvements are ongoing.
 
-The first phase focuses on collecting historical ice reports from the [Colorado Ice Conditions Facebook page](https://www.facebook.com/COIceconditions) using Python and Playwright.
+The first phase focuses on collecting historical ice reports from the [Colorado Ice Conditions Facebook page](https://www.facebook.com/COIceconditions) using Python and Playwright. The scraper extracts Facebook posts and associated comments, including content loaded dynamically through scrolling.
 
-The scraper is designed to:
+Manual validation has confirmed that the scraper generally captures the expected records without substantial duplication or silent omissions, though some posts still produce extraction errors (approximately 10% during recent testing). These errors are logged, and the scraper is designed to continue processing subsequent posts rather than terminating the entire run.
 
-- Navigate dynamically loaded Facebook content, including a virtualized feed.
-- Identify and extract posts while avoiding duplicate processing.
-- Expand truncated posts to capture complete text.
-- Extract post timestamps and available metadata.
-- Parse comments, including timestamps, comment IDs, and associated post IDs.
-- Store extracted data in JSON format for downstream processing.
+Known limitations include:
+- Not all posts can be extracted successfully.
+- Complete extraction of nested comment replies is not supported.
+- Changes to Facebook's HTML structure or loading behavior may require adjustments to the scraper.
+
+The current implementation is suitable for the project's initial data collection and exploratory analysis phases, with additional validation planned as the dataset grows.
 
 ### Technical Challenges
 
@@ -30,11 +30,73 @@ Facebook's dynamically changing page structure presents several challenges, incl
 
 Development has focused on handling these challenges through incremental debugging, dynamic element selection, and separating browser automation from extraction and parsing logic.
 
+## Setup and Usage
+
+### Prerequisites
+
+- Python 3.9 or later
+- Git
+- Chromium (installed through Playwright)
+- A Facebook account for manually logging in, if prompted
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/hcharise/ice-prediction.git
+   cd ice-prediction
+   ```
+
+2. Create and activate a Python virtual environment:
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+   On Windows, use `.venv\Scripts\activate` instead.
+
+3. Install project dependencies:
+
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+
+4. Install the Chromium browser used by Playwright:
+
+   ```bash
+   python -m playwright install chromium
+   ```
+
+### Running the Scraper
+
+With the virtual environment activated, run:
+
+```bash
+python facebook_scraper.py
+```
+
+The scraper opens the Colorado Ice Conditions Facebook page in Chromium. Follow the terminal prompts to log in manually if needed and confirm when the browser is ready.
+
+The scraper extracts posts and associated comments and saves the results to `facebook_posts.json` and `facebook_comments.json`.
+
+Follow the terminal prompts to close the browser when processing is complete.
+
+### Output
+
+The scraper generates two JSON files in the project directory:
+
+- `facebook_posts.json` — Extracted post text, timestamps, post IDs, and URLs.
+- `facebook_comments.json` — Extracted comment text, timestamps, comment IDs, and associated post IDs.
+
+These files provide the raw data for subsequent processing, including identifying lake names, observation dates, and reported ice thickness.
+
 ## Project Roadmap
 
 - [x] Implement initial post extraction
 - [x] Implement initial comment and reply extraction
-- [ ] Complete scraper debugging, validation, and refactoring
+- [ ] Improve scraper reliability and expand nested reply extraction
 - [ ] Extract structured lake, date, and ice thickness observations
 - [ ] Integrate historical weather data
 - [ ] Develop and evaluate predictive models
