@@ -210,36 +210,9 @@ def extract_comments(page, post_id):
         next_comment = find_next_comment(articles, found_comment_keys)
 
         if next_comment is not None:
-            try:
-                # Find section of article that contain actual comments
-                comment_text = next_comment.locator('span[dir="auto"][lang="en"]')
-                if comment_text.count() == 0:
-                    continue
 
-                # Extract comment text
-                text = comment_text.first.inner_text(timeout=1000).strip()
-
-                if not text:
-                    continue
-
-            except Exception as e:
-                print(f"Error extracting comment text: {e}")
-                continue
-
-            # Get details from comment
-            comment_details = extract_comment_details(next_comment)
-
-            try:
-                comments.append({
-                    "type": "comment",
-                    "post_id": post_id,
-                    "timestamp": comment_details["timestamp"],
-                    "comment_id": comment_details["comment_id"],
-                    "text": text, ## string of text from inner_text of the article
-                })
-            except Exception as e:
-                print(f"Error appending comments: {e}")
-
+            handle_comment_extraction(next_comment, comments, post_id)
+            
             # Reset scroll attempts
             scroll_attempts = 0
         else:
@@ -284,6 +257,39 @@ def find_next_comment(articles, found_comment_keys):
             print(f"Error finding next comment: {e}")
 
     return next_comment
+
+
+def handle_comment_extraction(next_comment, comments, post_id):
+    try:
+        # Find section of article that contain actual comments
+        comment_text = next_comment.locator('span[dir="auto"][lang="en"]')
+        if comment_text.count() == 0:
+            return
+
+        # Extract comment text
+        text = comment_text.first.inner_text(timeout=1000).strip()
+
+        if not text:
+            return
+
+    except Exception as e:
+        print(f"Error extracting comment text: {e}")
+        return
+
+    # Get details from comment
+    comment_details = extract_comment_details(next_comment)
+
+    try:
+        comments.append({
+            "type": "comment",
+            "post_id": post_id,
+            "timestamp": comment_details["timestamp"],
+            "comment_id": comment_details["comment_id"],
+            "text": text, ## string of text from inner_text of the article
+        })
+    except Exception as e:
+        print(f"Error appending comments: {e}")
+
 
 # Gets timestamp and comment ID from each comment
 def extract_comment_details(article):
