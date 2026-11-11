@@ -79,6 +79,9 @@ def find_next_post(message_elements, found_post_keys):
 
 
 def handle_post_extraction(next_message, page, posts, comments, post_index):
+    dialog_opened = False
+    post_succeeded = False
+    
     try:
         ## timestamp, opening
         timestamp = None
@@ -90,26 +93,28 @@ def handle_post_extraction(next_message, page, posts, comments, post_index):
         except Exception as e:
             print(f"Error extracting TIMESTAMP from post: {e}")
 
-        # Flag if dialog box is opened
-        dialog_opened = False
-
         # Open dialog and update flag
         open_post_window(page, timestamp_link)
         dialog_opened = True
 
         # POST DETAILS
-        post_details = extract_post_details(page, timestamp, post_index)
-        posts.append(post_details)
+        try:
+            post_details = extract_post_details(page, timestamp, post_index)
+            posts.append(post_details)
+            post_succeeded = True
+        except Exception as e:
+            print(f"Error extracting POST DETAILS from post: {e}")
 
         # COMMENT DETAILS
-        post_comments = extract_comments(page, post_details["post_id"])
-        comments.extend(post_comments)
-
-        return True
+        if post_succeeded:
+            try:
+                post_comments = extract_comments(page, post_details["post_id"])
+                comments.extend(post_comments)
+            except Exception as e:
+                print(f"Error extracting COMMENT DETAILS from post: {e}")
 
     except Exception as e:
         print(f"Error extracting post: {e}")
-        return False
 
     finally:
         # Close dialog if opened
@@ -118,7 +123,9 @@ def handle_post_extraction(next_message, page, posts, comments, post_index):
                 close_post_window(page)
             except Exception as e:
                 print(f"Error closing dialog: {e}")
-                raise
+                raise # future extractions may fail if this exception is ignored
+    
+    return post_succeeded
 
 
 def extract_post_details(page, timestamp, post_index):
