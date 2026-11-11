@@ -30,11 +30,14 @@ def extract_posts_and_comments(page):
 
             # Print processing/success/failed messages around handling post extraction
             post_index += 1
-            print(f"Post {post_index}: Processing")
-            if handle_post_extraction(next_message, page, posts, comments, post_index):
+            result = handle_post_extraction(next_message, page, posts, comments, post_index)
+
+            if result is True:
                 print(f"Post {post_index}: Succeeded")
+            elif result is False:
+                print(f"Post {post_index}: Failed")
             else:
-                print(f"Post {post_index}: FAILED")
+                print(f"Post {post_index}: Skipped")
 
             # may not be necessary?
             page.wait_for_timeout(1500)
@@ -81,7 +84,7 @@ def find_next_post(message_elements, found_post_keys):
 def handle_post_extraction(next_message, page, posts, comments, post_index):
     dialog_opened = False
     post_succeeded = False
-    
+
     try:
         ## timestamp, opening
         timestamp = None
@@ -96,6 +99,11 @@ def handle_post_extraction(next_message, page, posts, comments, post_index):
         # Open dialog and update flag
         open_post_window(page, timestamp_link)
         dialog_opened = True
+
+        # Check that we're still on COIce page, ie that post is not a repost
+        if "COIceconditions" not in page.url:
+            print(f"Skipping external post: {page.url}")
+            return None
 
         # POST DETAILS
         try:
@@ -228,7 +236,6 @@ def extract_comments(page, post_id):
         next_comment = find_next_comment(articles, found_comment_keys)
 
         if next_comment is not None:
-
             handle_comment_extraction(next_comment, comments, post_id)
             
             # Reset scroll attempts
