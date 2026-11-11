@@ -3,7 +3,7 @@ from urllib.parse import urlparse, parse_qs
 
 def extract_posts_and_comments(page):
     SCROLL_MAX = 10 # max scrolls if no new posts are found
-    POSTS_MAX = 6 # maximum number of posts to be retrieved (what ultimately ends the looping)
+    POSTS_MAX = 5 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
     comments = []
     found_post_keys = set() # stores keys from posts already found to avoid duplication
@@ -38,9 +38,6 @@ def extract_posts_and_comments(page):
                 print(f"Post {post_index}: Failed")
             else:
                 print(f"Post {post_index}: Skipped")
-
-            # may not be necessary?
-            page.wait_for_timeout(1500)
 
             # Reset scrolls to 0 to find new next post
             scroll_attempts = 0
@@ -102,7 +99,7 @@ def handle_post_extraction(next_message, page, posts, comments, post_index):
 
         # Check that we're still on COIce page, ie that post is not a repost
         if "COIceconditions" not in page.url:
-            print(f"Skipping external post: {page.url}")
+            print(f"Skipping external post or reel: {page.url}")
             return None
 
         # POST DETAILS
@@ -174,7 +171,7 @@ def locate_post_timestamp_link(message):
 def extract_post_timestamp(timestamp_link, page):
     # Hover over the timestamp link and get timestamp
     timestamp_link.hover(timeout=3000)
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(500) # replace with conditional wait?
     tooltips = page.locator('[role="tooltip"]')
     timestamp = tooltips.first.inner_text(timeout=1000).strip()
     # could add a layer of validation here - is what we got actually a date/time?
@@ -184,12 +181,12 @@ def extract_post_timestamp(timestamp_link, page):
 
 def open_post_window(page, timestamp_link):
     timestamp_link.click()
-    page.wait_for_timeout(1500)
+    page.wait_for_timeout(1500) # replace with conditional wait?
 
     
 def close_post_window(page):
     page.go_back(timeout=5000)
-    page.wait_for_timeout(1500)
+    page.wait_for_timeout(1500) # replace with conditional wait?
 
     
 def extract_post_text(page):
