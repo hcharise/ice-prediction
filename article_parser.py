@@ -3,11 +3,12 @@ from urllib.parse import urlparse, parse_qs
 
 def extract_posts_and_comments(page):
     SCROLL_MAX = 10 # max scrolls if no new posts are found
-    POSTS_MAX = 5 # maximum number of posts to be retrieved (what ultimately ends the looping)
+    POSTS_MAX = 6 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
     comments = []
     found_post_keys = set() # stores keys from posts already found to avoid duplication
     scroll_attempts = 0
+    post_index = 0
     
     # Identify initial set of message elements ie post elements
     message_elements = page.locator(
@@ -27,7 +28,13 @@ def extract_posts_and_comments(page):
             # is this still necessary?
             next_message = message_elements.filter(has_text=next_key).first
 
-            handle_post_extraction(next_message, page, posts, comments)
+            # Print processing/success/failed messages around handling post extraction
+            post_index += 1
+            print(f"Post {post_index}: Processing")
+            if handle_post_extraction(next_message, page, posts, comments, post_index):
+                print(f"Post {post_index}: Succeeded")
+            else:
+                print(f"Post {post_index}: FAILED")
 
             # may not be necessary?
             page.wait_for_timeout(1500)
@@ -71,7 +78,7 @@ def find_next_post(message_elements, found_post_keys):
     return next_message, next_key
 
 
-def handle_post_extraction(next_message, page, posts, comments):
+def handle_post_extraction(next_message, page, posts, comments, post_index):
     try:
         ## timestamp, opening
         timestamp = None
@@ -91,15 +98,18 @@ def handle_post_extraction(next_message, page, posts, comments):
         dialog_opened = True
 
         # POST DETAILS
-        post_details = extract_post_details(page, timestamp)
+        post_details = extract_post_details(page, timestamp, post_index)
         posts.append(post_details)
 
         # COMMENT DETAILS
         post_comments = extract_comments(page, post_details["post_id"])
         comments.extend(post_comments)
 
+        return True
+
     except Exception as e:
         print(f"Error extracting post: {e}")
+        return False
 
     finally:
         # Close dialog if opened
@@ -111,7 +121,7 @@ def handle_post_extraction(next_message, page, posts, comments):
                 raise
 
 
-def extract_post_details(page, timestamp):
+def extract_post_details(page, timestamp, post_index):
 
     # Initialize
     text = None
@@ -129,6 +139,7 @@ def extract_post_details(page, timestamp):
 
     return {
         "type": "post",
+        "post_index": str(post_index),
         "timestamp": timestamp,
         "post_id": post_id,
         "url": url,
