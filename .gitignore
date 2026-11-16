@@ -3,6 +3,7 @@
 .DS_Store
 .venv/
 __pycache__/
+launch.json
 
 # FACEBOOK LOGIN DATA
 facebook_playwright_profile/

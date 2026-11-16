@@ -1,7 +1,7 @@
 import re
 from urllib.parse import urlparse, parse_qs
 
-POSTS_MAX = 20 # maximum number of posts to be retrieved (what ultimately ends the looping)
+POSTS_MAX = 10 # maximum number of posts to be retrieved (what ultimately ends the looping)
 SCROLL_MAX = 8 # max scrolls if no new posts/comments are found
 KEY_CHAR_LENGTH = 100 # num characters in keys
 SCROLL_DIST = 500 # distance to travel down when scrolling
@@ -85,7 +85,7 @@ def find_next_post(message_elements, found_post_keys):
 
 
 def handle_post_extraction(next_message, page, posts, comments, post_index):
-    dialog_opened = False
+    post_opened = False
     post_succeeded = False
 
     try:
@@ -100,13 +100,18 @@ def handle_post_extraction(next_message, page, posts, comments, post_index):
             print(f"Error extracting TIMESTAMP from post: {e}")
 
         # Open dialog and update flag
-        open_post_window(page, timestamp_link)
-        dialog_opened = True
+        original_url = page.url
 
-        # Check that we're still on COIce page, ie that post is not a repost
-        if "COIceconditions" not in page.url:
-            print(f"Skipping external post or reel: {page.url}")
+        open_post_window(page, timestamp_link)
+
+        if not page.url.startswith("https://www.facebook.com/COIceconditions/posts/"):
+            print(f"Skipping unsupported post: {page.url}")
             return None
+
+        page.locator('[role="dialog"][aria-modal="true"]').wait_for(
+            state="visible",
+            timeout=LOAD_TIMEOUT_MS
+        )
 
         # POST DETAILS
         try:
@@ -129,12 +134,12 @@ def handle_post_extraction(next_message, page, posts, comments, post_index):
 
     finally:
         # Close dialog if opened
-        if dialog_opened:
+        if page.url != original_url:
             try:
-                close_post_window(page)
+                close_post_window(page, original_url)
             except Exception as e:
-                print(f"Error closing dialog: {e}")
-                raise # future extractions may fail if this exception is ignored
+                print(f"Error restoring feed: {e}")
+                raise
     
     return post_succeeded
 
@@ -178,7 +183,6 @@ def extract_post_timestamp(timestamp_link, page):
     # Hover over the timestamp link and get timestamp
     timestamp_link.hover(timeout=LOAD_TIMEOUT_MS)
 
-    timestamp_link.hover()
     page.locator('[role="tooltip"]').wait_for(
         state="visible",
         timeout=LOAD_TIMEOUT_MS
@@ -191,26 +195,24 @@ def extract_post_timestamp(timestamp_link, page):
 
 
 def open_post_window(page, timestamp_link):
+    original_url = page.url
+
     timestamp_link.click()
 
-    page.locator('[role="dialog"][aria-modal="true"]').wait_for(
-        state="visible",
+    page.wait_for_url(
+        lambda url: str(url) != original_url,
         timeout=LOAD_TIMEOUT_MS
     )
 
     
-def close_post_window(page):
-    page.go_back(timeout=LOAD_TIMEOUT_MS)
+def close_post_window(page, original_url):
 
-    page.locator('[role="dialog"][aria-modal="true"]').wait_for(
-        state="hidden",
-        timeout=LOAD_TIMEOUT_MS
-    )
+    page.go_back(timeout=LOAD_TIMEOUT_MS)
+    page.wait_for_url(original_url, timeout=LOAD_TIMEOUT_MS)
 
     
 def extract_post_text(page):
 
-    # Extract text
     dialog = page.get_by_role("dialog")
     dialog_message = dialog.locator(
         '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
