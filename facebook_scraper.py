@@ -18,18 +18,28 @@ def load_page(p):
 
     print("Opening Facebook page...")
     page.goto(
-        PAGE_URL,
-        wait_until="domcontentloaded",
-        timeout=6000
+        "https://www.facebook.com/COIceconditions",
+        wait_until="domcontentloaded"
     )
 
-    # Log into Facebook
-    print(
-        "\nIf Facebook asks you to log in, log in manually in the browser.\n"
-        "Additional authentication/CAPTCHAs may be required.\n"
+    # Check whether Facebook is requesting login
+    login_form = page.locator('#login_popup_cta_form')
+    while login_form.is_visible():
+        print(
+            "\nFacebook requires login credentials.\n"
+            "Log into the browswer manually, including completing any required CAPTCHAs.\n"
+        )
+        input("Once the Colorado Ice Conditions page is fully visible, return here and press ENTER.")
+
+    # Wait for the feed to be ready
+    page.locator(
+        '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+    ).first.wait_for(
+        state="visible",
+        timeout=5000
     )
-    input("Press ENTER once the Colorado Ice Conditions page is fully visible... ")
-    time.sleep(5)
+
+    print("Facebook feed loaded. Starting extraction...")
 
     return page
 
@@ -38,12 +48,12 @@ def main():
 
         page = load_page(p)
 
-        # EXTRACT POSTS & COMMENTS/REPLIES ----------------------------------------------------------------
+        # EXTRACT POSTS & COMMENTS ----------------------------------------------------------------
         posts = [] # stores main posts
         comments = [] # stores comments & replies
         posts, comments = extract_posts_and_comments(page)
 
-        # Save found posts/comments/replies to JSON
+        # SAVE POSTS & COMMENTS TO JSON -----------------------------------------------------------
         with open("facebook_posts.json", "w", encoding="utf-8") as f:
             json.dump(posts, f, indent=2, ensure_ascii=False)
 
@@ -54,10 +64,9 @@ def main():
 
         print(f"Saved {len(comments)} comments.")
 
-        # CLOSE BROWSER -----------------------------------------------------------------------------------
-        input("Press ENTER to close the browser... ")
+        # CLOSE BROWSER ----------------------------------------------------------------------------
         page.context.close()
-        print("-----------------------------------------------------------------------------------------------")
+        print("-----------------------------------------------------------------------------------")
 
 if __name__ == "__main__":
     main()

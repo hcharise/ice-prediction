@@ -1,7 +1,7 @@
 import re
 from urllib.parse import urlparse, parse_qs
 
-POSTS_MAX = 20 # maximum number of posts to be retrieved (what ultimately ends the looping)
+POSTS_MAX = 2 # maximum number of posts to be retrieved (what ultimately ends the looping)
 SCROLL_MAX = 8 # max scrolls if no new posts/comments are found
 KEY_CHAR_LENGTH = 100 # num characters in keys
 SCROLL_DIST = 500 # distance to travel down when scrolling
