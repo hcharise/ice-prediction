@@ -18,7 +18,7 @@ The first phase focuses on collecting historical ice reports from the [Colorado 
 Manual validation has confirmed that the scraper generally captures the expected records without substantial duplication or silent omissions, though some posts still produce extraction errors (approximately 10% during recent testing). These errors are logged, and the scraper is designed to continue processing subsequent posts rather than terminating the entire run.
 
 Known limitations include:
-- Not all posts can be extracted successfully.
+- Posts with alternate URLs (reels, reposts) are intentionally skipped during extraction.
 - Complete extraction of nested comment replies is not supported.
 - Changes to Facebook's HTML structure or loading behavior may require adjustments to the scraper.
 
