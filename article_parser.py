@@ -1,15 +1,15 @@
 import re
 from urllib.parse import urlparse, parse_qs
 
+POSTS_MAX = 20 # maximum number of posts to be retrieved (what ultimately ends the looping)
 SCROLL_MAX = 8 # max scrolls if no new posts/comments are found
-SCROLL_WAIT_MS = 200 # ms to wait after scrolling
-LOAD_TIMEOUT_MS = 5000 # ms to wait after clicking/hovering
-TEXT_TIMEOUT_MS = 1000 # ms to wait for inner_text extraction
 KEY_CHAR_LENGTH = 100 # num characters in keys
 SCROLL_DIST = 500 # distance to travel down when scrolling
+SCROLL_WAIT_MS = 200 # ms to wait after scrolling
+LOAD_TIMEOUT_MS = 5000 # ms to wait after clicking/hovering
+TEXT_TIMEOUT_MS = 1000 # ms to wait for value extraction
 
 def extract_posts_and_comments(page):
-    POSTS_MAX = 5 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
     comments = []
     found_post_keys = set() # stores keys from posts already found to avoid duplication
@@ -337,12 +337,12 @@ def extract_comment_details(article):
     link = article.locator('a[href*="/COIceconditions/posts/"]').first
 
     # Get comment ID
-    href = link.get_attribute("href")
+    href = link.get_attribute("href", timeout=TEXT_TIMEOUT_MS)
     parsed = urlparse(href)
     params = parse_qs(parsed.query)
 
     metadata = {
-        "timestamp": link.get_attribute("aria-label"),
+        "timestamp": link.get_attribute("aria-label", timeout=TEXT_TIMEOUT_MS),
         "comment_id": params.get("comment_id", [None])[0],
     }
     
