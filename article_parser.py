@@ -1,8 +1,14 @@
 import re
 from urllib.parse import urlparse, parse_qs
 
+SCROLL_MAX = 8 # max scrolls if no new posts/comments are found
+SCROLL_WAIT_MS = 200 # ms to wait after scrolling
+LOAD_TIMEOUT_MS = 5000 # ms to wait after clicking/hovering
+TEXT_TIMEOUT_MS = 1000 # ms to wait for inner_text extraction
+KEY_CHAR_LENGTH = 100 # num characters in keys
+SCROLL_DIST = 500 # distance to travel down when scrolling
+
 def extract_posts_and_comments(page):
-    SCROLL_MAX = 10 # max scrolls if no new posts are found
     POSTS_MAX = 5 # maximum number of posts to be retrieved (what ultimately ends the looping)
     posts = []
     comments = []
@@ -44,8 +50,8 @@ def extract_posts_and_comments(page):
 
         else:
             # Scroll down on page before repeating loop to see if new message_elements can be found
-            page.mouse.wheel(0, 500)
-            page.wait_for_timeout(500)
+            page.mouse.wheel(0, SCROLL_DIST)
+            page.wait_for_timeout(SCROLL_WAIT_MS)
 
             scroll_attempts += 1
 
@@ -61,7 +67,7 @@ def find_next_post(message_elements, found_post_keys):
         try:
             # Get key from next message_element candidate
             candidate = message_elements.nth(j)
-            candidate_key = candidate.inner_text(timeout=1000).strip()[:100]
+            candidate_key = candidate.inner_text(timeout=TEXT_TIMEOUT_MS).strip()[:KEY_CHAR_LENGTH]
 
             # If next message_element candidate is new, exit search to extract post
             if candidate_key not in found_post_keys:
@@ -170,23 +176,36 @@ def locate_post_timestamp_link(message):
 
 def extract_post_timestamp(timestamp_link, page):
     # Hover over the timestamp link and get timestamp
-    timestamp_link.hover(timeout=3000)
-    page.wait_for_timeout(500) # replace with conditional wait?
+    timestamp_link.hover(timeout=LOAD_TIMEOUT_MS)
+
+    timestamp_link.hover()
+    page.locator('[role="tooltip"]').wait_for(
+        state="visible",
+        timeout=LOAD_TIMEOUT_MS
+    )
+
     tooltips = page.locator('[role="tooltip"]')
-    timestamp = tooltips.first.inner_text(timeout=1000).strip()
-    # could add a layer of validation here - is what we got actually a date/time?
+    timestamp = tooltips.first.inner_text(timeout=TEXT_TIMEOUT_MS).strip()
 
     return timestamp
 
 
 def open_post_window(page, timestamp_link):
     timestamp_link.click()
-    page.wait_for_timeout(1500) # replace with conditional wait?
+
+    page.locator('[role="dialog"][aria-modal="true"]').wait_for(
+        state="visible",
+        timeout=LOAD_TIMEOUT_MS
+    )
 
     
 def close_post_window(page):
-    page.go_back(timeout=5000)
-    page.wait_for_timeout(1500) # replace with conditional wait?
+    page.go_back(timeout=LOAD_TIMEOUT_MS)
+
+    page.locator('[role="dialog"][aria-modal="true"]').wait_for(
+        state="hidden",
+        timeout=LOAD_TIMEOUT_MS
+    )
 
     
 def extract_post_text(page):
@@ -196,7 +215,7 @@ def extract_post_text(page):
     dialog_message = dialog.locator(
         '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
     )
-    text = dialog_message.inner_text(timeout=3000).strip()
+    text = dialog_message.inner_text(timeout=LOAD_TIMEOUT_MS).strip()
 
     return text
 
@@ -217,7 +236,6 @@ def extract_post_id(url):
 
 
 def extract_comments(page, post_id):
-    SCROLL_MAX = 10 # max scrolls if no new posts are found
     found_comment_keys = set() # stores keys from posts already processed to avoid duplication
     scroll_attempts = 0
 
@@ -242,8 +260,8 @@ def extract_comments(page, post_id):
             dialog.hover()
 
             # Scroll down on page before repeating loop to see if new articles can be found
-            page.mouse.wheel(0, 500)
-            page.wait_for_timeout(500)
+            page.mouse.wheel(0, SCROLL_DIST)
+            page.wait_for_timeout(SCROLL_WAIT_MS)
 
             scroll_attempts += 1
 
@@ -261,7 +279,7 @@ def find_next_comment(articles, found_comment_keys):
        
             # Get next article element and its key
             candidate_article = articles.nth(i)
-            candidate_key = candidate_article.inner_text(timeout=1000).strip()[:100]
+            candidate_key = candidate_article.inner_text(timeout=TEXT_TIMEOUT_MS).strip()[:KEY_CHAR_LENGTH]
 
             if not candidate_key:
                 continue
@@ -289,7 +307,7 @@ def handle_comment_extraction(next_comment, comments, post_id):
             return
 
         # Extract comment text
-        text = comment_text.first.inner_text(timeout=1000).strip()
+        text = comment_text.first.inner_text(timeout=TEXT_TIMEOUT_MS).strip()
 
         if not text:
             return
