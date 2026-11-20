@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 import json
-from article_parser import extract_posts_and_comments
+from facebook_parser import extract_posts_and_comments
 
 PAGE_URL = "https://www.facebook.com/COIceconditions" # facebook URL to retrieve posts from
 PROFILE_DIR = "./facebook_playwright_profile" # save facebook credentials
