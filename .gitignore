@@ -8,6 +8,5 @@ launch.json
 # FACEBOOK LOGIN DATA
 facebook_playwright_profile/
 
-# JSON OUTPUT FILES
-facebook_posts.json
-facebook_comments.json
+# JSON OUTPUT FOLDER
+output/

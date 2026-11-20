@@ -55,10 +55,10 @@ def main():
             posts, comments = extract_posts_and_comments(page)
 
             # SAVE POSTS & COMMENTS TO JSON -----------------------------------------------------------
-            with open("facebook_posts.json", "w", encoding="utf-8") as f:
+            with open("output/facebook_posts.json", "w", encoding="utf-8") as f:
                 json.dump(posts, f, indent=2, ensure_ascii=False)
 
-            with open("facebook_comments.json", "w", encoding="utf-8") as f:
+            with open("output/facebook_comments.json", "w", encoding="utf-8") as f:
                 json.dump(comments, f, indent=2, ensure_ascii=False)
 
             print(f"Saved {len(posts)} posts.")
