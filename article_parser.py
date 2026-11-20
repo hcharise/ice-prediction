@@ -316,12 +316,12 @@ def handle_comment_extraction(next_comment, comments, post_id):
         if not text:
             return
 
-    except Exception as e:
-        print(f"Error extracting comment text: {e}")
-        return
+        # Get details from comment
+        comment_details = extract_comment_details(next_comment)
 
-    # Get details from comment
-    comment_details = extract_comment_details(next_comment)
+    except Exception as e:
+        print(f"Error extracting comment details: {e}")
+        return
 
     try:
         comments.append({
