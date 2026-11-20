@@ -328,8 +328,8 @@ def handle_comment_extraction(next_comment, comments, post_id):
     comments.append({
         "type": "comment",
         "post_id": post_id,
-        "timestamp": comment_details["timestamp"],
         "comment_id": comment_details["comment_id"],
+        "timestamp": comment_details["timestamp"],
         "text": text, ## string of text from inner_text of the comment
     })
 
