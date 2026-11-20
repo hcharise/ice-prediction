@@ -1,6 +1,5 @@
 from playwright.sync_api import sync_playwright
 import json
-import time
 from article_parser import extract_posts_and_comments
 
 PAGE_URL = "https://www.facebook.com/COIceconditions" # facebook URL to retrieve posts from
@@ -8,14 +7,15 @@ PROFILE_DIR = "./facebook_playwright_profile" # save facebook credentials
 
 def load_page(p):
 
+    # Set playwright context
     context = p.chromium.launch_persistent_context(
         PROFILE_DIR,
         headless=False,
         viewport={"width": 1400, "height": 1000},
     )
-
     page = context.pages[0] if context.pages else context.new_page()
 
+    # Open page
     print("Opening Facebook page...")
     page.goto(
         "https://www.facebook.com/COIceconditions",

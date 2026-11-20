@@ -1,10 +1,10 @@
-import re
 from urllib.parse import urlparse, parse_qs
 
-POSTS_MAX = 2 # maximum number of posts to be retrieved (what ultimately ends the looping)
+POSTS_MAX = 10 # maximum number of posts to be retrieved (what ultimately ends the looping)
 SCROLL_MAX = 8 # max scrolls if no new posts/comments are found
 KEY_CHAR_LENGTH = 100 # num characters in keys
 SCROLL_DIST = 500 # distance to travel down when scrolling
+
 SCROLL_WAIT_MS = 200 # ms to wait after scrolling
 LOAD_TIMEOUT_MS = 5000 # ms to wait after clicking/hovering
 TEXT_TIMEOUT_MS = 1000 # ms to wait for value extraction
@@ -27,17 +27,14 @@ def extract_posts_and_comments(page):
         # Search through message_elements currently in DOM, locating next one that has not been processed
         next_message, next_key = find_next_post(message_elements, found_post_keys)
 
-        # EXTRACT POST TEXT & TIMESTAMP -------------------------------------------------------------------
+        # Once next post is identified, extract post text and timestamp
         if next_message is not None:
 
-            # Confirm that Playwright is on the correct post still
-            # is this still necessary?
-            next_message = message_elements.filter(has_text=next_key).first
-
-            # Print processing/success/failed messages around handling post extraction
+            # Extract post/comment details
             post_index += 1
             result = handle_post_extraction(next_message, page, posts, comments, post_index)
-
+            
+            # Print processing/success/failed messages around handling post extraction
             if result is True:
                 print(f"Post {post_index}: Succeeded")
             elif result is False:
@@ -63,6 +60,7 @@ def find_next_post(message_elements, found_post_keys):
     next_message = None
     next_key = None
 
+    # Search through messages currently visible
     for j in range(message_elements.count()):
         try:
             # Get key from next message_element candidate
@@ -85,35 +83,35 @@ def find_next_post(message_elements, found_post_keys):
 
 
 def handle_post_extraction(next_message, page, posts, comments, post_index):
-    post_opened = False
     post_succeeded = False
 
     try:
-        ## timestamp, opening
-        timestamp = None
+        # Identify timestamp link
         timestamp_link = locate_post_timestamp_link(next_message)
 
-        # Extract timestamp from tooltip
+        # TIMESTAMP - extract timestamp from link
+        timestamp = None
         try:
             timestamp = extract_post_timestamp(timestamp_link, page)
         except Exception as e:
             print(f"Error extracting TIMESTAMP from post: {e}")
 
-        # Open dialog and update flag
+        # Open dialog box of post
         original_url = page.url
-
         open_post_window(page, timestamp_link)
 
+        # Skip reels or reposts with different urls
         if not page.url.startswith("https://www.facebook.com/COIceconditions/posts/"):
             print(f"Skipping unsupported post: {page.url}")
             return None
 
+        # Wait for dialog to load fully
         page.locator('[role="dialog"][aria-modal="true"]').wait_for(
             state="visible",
             timeout=LOAD_TIMEOUT_MS
         )
 
-        # POST DETAILS
+        # POST DETAILS - extract post details
         try:
             post_details = extract_post_details(page, timestamp, post_index)
             posts.append(post_details)
@@ -121,7 +119,7 @@ def handle_post_extraction(next_message, page, posts, comments, post_index):
         except Exception as e:
             print(f"Error extracting POST DETAILS from post: {e}")
 
-        # COMMENT DETAILS
+        # COMMENT DETAILS - extract comment details
         if post_succeeded:
             try:
                 post_comments = extract_comments(page, post_details["post_id"])
@@ -172,6 +170,7 @@ def extract_post_details(page, timestamp, post_index):
 
 def locate_post_timestamp_link(message):
 
+    # Identify timestamp link from post
     container = message.locator("xpath=../../../..")
     header = container.locator("xpath=./*").nth(1)
     timestamp_link = header.locator("a").nth(2)
@@ -180,14 +179,16 @@ def locate_post_timestamp_link(message):
 
 
 def extract_post_timestamp(timestamp_link, page):
-    # Hover over the timestamp link and get timestamp
+    # Hover over the timestamp link
     timestamp_link.hover(timeout=LOAD_TIMEOUT_MS)
 
+    # Ensure timestamp has loaded
     page.locator('[role="tooltip"]').wait_for(
         state="visible",
         timeout=LOAD_TIMEOUT_MS
     )
 
+    # Extract timestamp text
     tooltips = page.locator('[role="tooltip"]')
     timestamp = tooltips.first.inner_text(timeout=TEXT_TIMEOUT_MS).strip()
 
@@ -197,8 +198,10 @@ def extract_post_timestamp(timestamp_link, page):
 def open_post_window(page, timestamp_link):
     original_url = page.url
 
+    # Click to open post dialog box
     timestamp_link.click()
 
+    # Wait for new page to load
     page.wait_for_url(
         lambda url: str(url) != original_url,
         timeout=LOAD_TIMEOUT_MS
@@ -207,16 +210,20 @@ def open_post_window(page, timestamp_link):
     
 def close_post_window(page, original_url):
 
+    # Go back and wait for page to load
     page.go_back(timeout=LOAD_TIMEOUT_MS)
     page.wait_for_url(original_url, timeout=LOAD_TIMEOUT_MS)
 
     
 def extract_post_text(page):
 
+    # Locate post text
     dialog = page.get_by_role("dialog")
     dialog_message = dialog.locator(
         '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
     )
+
+    # Extract text
     text = dialog_message.inner_text(timeout=LOAD_TIMEOUT_MS).strip()
 
     return text
@@ -332,7 +339,7 @@ def handle_comment_extraction(next_comment, comments, post_id):
     except Exception as e:
         print(f"Error appending comments: {e}")
 
-# Gets timestamp and comment ID from each comment
+
 def extract_comment_details(article):
 
     # Identify link on comment that contains metadata (ie the timestamp)
@@ -342,10 +349,8 @@ def extract_comment_details(article):
     href = link.get_attribute("href", timeout=TEXT_TIMEOUT_MS)
     parsed = urlparse(href)
     params = parse_qs(parsed.query)
-
-    metadata = {
+    
+    return {
         "timestamp": link.get_attribute("aria-label", timeout=TEXT_TIMEOUT_MS),
         "comment_id": params.get("comment_id", [None])[0],
     }
-    
-    return metadata
