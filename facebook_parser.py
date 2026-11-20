@@ -25,14 +25,14 @@ def extract_posts_and_comments(page):
     while scroll_attempts < SCROLL_MAX and post_index < POSTS_MAX:
 
         # Search through message_elements currently in DOM, locating next one that has not been processed
-        next_message, next_key = find_next_post(message_elements, found_post_keys)
+        next_post_element = find_next_post(message_elements, found_post_keys)
 
         # Once next post is identified, extract post text and timestamp
-        if next_message is not None:
+        if next_post_element is not None:
 
             # Extract post/comment details
             post_index += 1
-            result = handle_post_extraction(next_message, page, posts, comments, post_index)
+            result = handle_post_extraction(next_post_element, page, posts, comments, post_index)
             
             # Print processing/success/failed messages around handling post extraction
             if result is True:
@@ -57,7 +57,7 @@ def extract_posts_and_comments(page):
 
 def find_next_post(message_elements, found_post_keys):
 
-    next_message = None
+    next_post_element = None
     next_key = None
 
     # Search through messages currently visible
@@ -69,7 +69,7 @@ def find_next_post(message_elements, found_post_keys):
 
             # If next message_element candidate is new, exit search to extract post
             if candidate_key not in found_post_keys:
-                next_message = candidate
+                next_post_element = candidate
                 next_key = candidate_key
 
                 # Mark message as processed before changing the DOM when expanding
@@ -79,16 +79,16 @@ def find_next_post(message_elements, found_post_keys):
         except Exception as e:
             print(f"Error inspecting candidate {j}: {e}")
 
-    return next_message, next_key
+    return next_post_element
 
 
-def handle_post_extraction(next_message, page, posts, comments, post_index):
+def handle_post_extraction(next_post_element, page, posts, comments, post_index):
     original_url = page.url
     post_succeeded = False
 
     try:
         # Identify timestamp link
-        timestamp_link = locate_post_timestamp_link(next_message)
+        timestamp_link = locate_post_timestamp_link(next_post_element)
 
         # TIMESTAMP - extract timestamp from link
         timestamp = None
