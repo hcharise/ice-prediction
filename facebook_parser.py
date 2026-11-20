@@ -341,10 +341,16 @@ def extract_comment_details(comment):
 
     # Get comment ID
     href = link.get_attribute("href", timeout=TEXT_TIMEOUT_MS)
-    parsed = urlparse(href)
-    params = parse_qs(parsed.query)
     
     return {
         "timestamp": link.get_attribute("aria-label", timeout=TEXT_TIMEOUT_MS),
-        "comment_id": params.get("comment_id", [None])[0],
+        "comment_id": extract_comment_id(href),
     }
+
+
+def extract_comment_id(url):
+    # Parse url to find comment id section
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+
+    return params.get("comment_id", [None])[0]
