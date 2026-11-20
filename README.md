@@ -11,7 +11,7 @@ The project is being developed in stages, beginning with a Python-based web scra
 
 ### Current Status and Limitations
 
-**Status:** Initial data collection implemented and manually validated. Reliability improvements are ongoing.
+**Status:** Initial data collection implemented and manually validated. Core scraper reliability improvements are complete; additional validation and refinement will continue as the dataset grows.
 
 The first phase focuses on collecting historical ice reports from the [Colorado Ice Conditions Facebook page](https://www.facebook.com/COIceconditions) using Python and Playwright. The scraper extracts Facebook posts and associated comments, including content loaded dynamically through scrolling.
 
@@ -28,7 +28,7 @@ The current implementation is suitable for the project's initial data collection
 
 Facebook's dynamically changing page structure presents several challenges, including DOM elements that are replaced during scrolling, inconsistent content structures, and browser automation timeouts.
 
-Development has focused on handling these challenges through incremental debugging, dynamic element selection, and separating browser automation from extraction and parsing logic.
+Development has focused on handling these challenges through incremental debugging, dynamic element selection, and separating browser automation from extraction and parsing logic. To improve resilience, the scraper handles recoverable extraction errors at the individual post or comment level, restores the feed after inspecting each post, and tracks processed content to reduce duplicate extraction.
 
 ## Setup and Usage
 
@@ -81,11 +81,23 @@ The scraper opens the Colorado Ice Conditions Facebook page in Chromium. Follow 
 
 The scraper extracts posts and associated comments and saves the results to `facebook_posts.json` and `facebook_comments.json`.
 
-Follow the terminal prompts to close the browser when processing is complete.
+The browser closes automatically when extraction is complete.
+
+### Testing
+
+The scraper includes unit tests written with Python's built-in `unittest` framework. These tests validate post and comment ID extraction from Facebook URLs, including valid URLs, missing identifiers, and query parameters.
+
+Run the tests from the project root:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+The tests focus on URL parsing and do not require a browser session. Browser interactions and Facebook DOM extraction are not currently covered by automated tests.
 
 ### Output
 
-The scraper generates two JSON files in the project directory:
+The scraper generates two JSON files in the "output" directory:
 
 - `facebook_posts.json` — Extracted post text, timestamps, post IDs, and URLs.
 - `facebook_comments.json` — Extracted comment text, timestamps, comment IDs, and associated post IDs.
@@ -106,15 +118,15 @@ Raw scraped data is excluded from version control.
 ## Project Roadmap
 
 - [x] Implement initial post extraction
-- [x] Implement initial comment and reply extraction
-- [ ] Improve scraper reliability and expand nested reply extraction
+- [x] Implement initial comment extraction
+- [x] Improve scraper reliability
 - [ ] Extract structured lake, date, and ice thickness observations
 - [ ] Integrate historical weather data
 - [ ] Develop and evaluate predictive models
 
 ## Technologies
 
-**Current:** Python, Playwright, JSON, Git/GitHub
+**Current:** Python, Playwright, unittest, JSON, Git/GitHub
 
 **Planned:** pandas, weather data APIs, scikit-learn
 
