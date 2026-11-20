@@ -1,6 +1,6 @@
 from urllib.parse import urlparse, parse_qs
 
-POSTS_MAX = 10 # maximum number of posts to be retrieved (what ultimately ends the looping)
+POSTS_MAX = 3 # maximum number of posts to be retrieved (what ultimately ends the looping)
 SCROLL_MAX = 8 # max scrolls if no new posts/comments are found
 KEY_CHAR_LENGTH = 100 # num characters in keys
 SCROLL_DIST = 500 # distance to travel down when scrolling
@@ -83,6 +83,7 @@ def find_next_post(message_elements, found_post_keys):
 
 
 def handle_post_extraction(next_message, page, posts, comments, post_index):
+    original_url = page.url
     post_succeeded = False
 
     try:
@@ -97,7 +98,6 @@ def handle_post_extraction(next_message, page, posts, comments, post_index):
             print(f"Error extracting TIMESTAMP from post: {e}")
 
         # Open dialog box of post
-        original_url = page.url
         open_post_window(page, timestamp_link)
 
         # Skip reels or reposts with different urls
