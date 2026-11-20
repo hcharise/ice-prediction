@@ -349,6 +349,7 @@ def extract_comment_details(comment):
 
 
 def extract_comment_id(url):
+    
     # Parse url to find comment id section
     parsed = urlparse(url)
     params = parse_qs(parsed.query)
