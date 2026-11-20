@@ -325,16 +325,13 @@ def handle_comment_extraction(next_comment, comments, post_id):
         print(f"Error extracting comment details: {e}")
         return
 
-    try:
-        comments.append({
-            "type": "comment",
-            "post_id": post_id,
-            "timestamp": comment_details["timestamp"],
-            "comment_id": comment_details["comment_id"],
-            "text": text, ## string of text from inner_text of the comment
-        })
-    except Exception as e:
-        print(f"Error appending comments: {e}")
+    comments.append({
+        "type": "comment",
+        "post_id": post_id,
+        "timestamp": comment_details["timestamp"],
+        "comment_id": comment_details["comment_id"],
+        "text": text, ## string of text from inner_text of the comment
+    })
 
 
 def extract_comment_details(comment):
