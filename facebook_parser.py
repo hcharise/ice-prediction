@@ -245,14 +245,14 @@ def extract_comments(page, post_id):
 
     comments = []
 
-    # Identify article elements ie comments and replies
+    # Identify article elements, ie comments
     dialog = page.locator('[role="dialog"][aria-modal="true"]')
-    articles = dialog.locator('[role="article"]')
+    comment_elements = dialog.locator('[role="article"]')
 
     while scroll_attempts < SCROLL_MAX:
 
-        # Try extracting text and timestamp from each article
-        next_comment = find_next_comment(articles, found_comment_keys)
+        # Try extracting text and timestamp from each comment
+        next_comment = find_next_comment(comment_elements, found_comment_keys)
 
         if next_comment is not None:
             handle_comment_extraction(next_comment, comments, post_id)
@@ -263,7 +263,7 @@ def extract_comments(page, post_id):
             # Hover mouse on dialog box before scrolling
             dialog.hover()
 
-            # Scroll down on page before repeating loop to see if new articles can be found
+            # Scroll down on page before repeating loop to see if new comment_elements can be found
             page.mouse.wheel(0, SCROLL_DIST)
             page.wait_for_timeout(SCROLL_WAIT_MS)
 
@@ -272,25 +272,25 @@ def extract_comments(page, post_id):
     return comments
 
 
-def find_next_comment(articles, found_comment_keys):
+def find_next_comment(comment_elements, found_comment_keys):
 
     next_comment = None
     next_key = None
 
     # Search through visible comments
-    for i in range(articles.count()):
+    for i in range(comment_elements.count()):
         try:
        
-            # Get next article element and its key
-            candidate_article = articles.nth(i)
-            candidate_key = candidate_article.inner_text(timeout=TEXT_TIMEOUT_MS).strip()[:KEY_CHAR_LENGTH]
+            # Get next comment element and its key
+            candidate_comment = comment_elements.nth(i)
+            candidate_key = candidate_comment.inner_text(timeout=TEXT_TIMEOUT_MS).strip()[:KEY_CHAR_LENGTH]
 
             if not candidate_key:
                 continue
 
-            # Check if this article has already been found, if not, use it
+            # Check if this comment has already been found, if not, use it
             if candidate_key not in found_comment_keys:
-                next_comment = candidate_article
+                next_comment = candidate_comment
                 next_key = candidate_key
 
                 # Mark comment as found
@@ -305,7 +305,7 @@ def find_next_comment(articles, found_comment_keys):
 
 def handle_comment_extraction(next_comment, comments, post_id):
     try:
-        # Find section of article that contain actual comments
+        # Find section of article that contains actual comments
         comment_text = next_comment.locator('span[dir="auto"][lang="en"]')
         if comment_text.count() == 0:
             return
@@ -329,16 +329,16 @@ def handle_comment_extraction(next_comment, comments, post_id):
             "post_id": post_id,
             "timestamp": comment_details["timestamp"],
             "comment_id": comment_details["comment_id"],
-            "text": text, ## string of text from inner_text of the article
+            "text": text, ## string of text from inner_text of the comment
         })
     except Exception as e:
         print(f"Error appending comments: {e}")
 
 
-def extract_comment_details(article):
+def extract_comment_details(comment):
 
     # Identify link on comment that contains metadata (ie the timestamp)
-    link = article.locator('a[href*="/COIceconditions/posts/"]').first
+    link = comment.locator('a[href*="/COIceconditions/posts/"]').first
 
     # Get comment ID
     href = link.get_attribute("href", timeout=TEXT_TIMEOUT_MS)
