@@ -144,27 +144,22 @@ def handle_post_extraction(next_message, page, posts, comments, post_index):
 
 def extract_post_details(page, timestamp, post_index):
 
-    # Initialize
-    text = None
-    url = None
-    post_id = None
+    # Extract url, id, and text
+    url = page.url
+    post_id = extract_post_id(url)
+    text = extract_post_text(page)
 
-    # Extract url and text
-    try:
-        url = page.url
-        text = extract_post_text(page)
-        post_id = extract_post_id(url)
-
-    except Exception as e:
-        print(f"Error extracting TEXT/URL/ID from post: {e}")
+    # Raise exception if post_id or text are blank
+    if not post_id or not text:
+        raise ValueError("Post is missing its ID or text")
 
     return {
         "type": "post",
-        "post_index": str(post_index),
-        "timestamp": timestamp,
+        "post_index": post_index,
         "post_id": post_id,
+        "timestamp": timestamp,
         "url": url,
-        "text": text
+        "text": text,
     }
 
 
