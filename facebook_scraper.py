@@ -48,25 +48,27 @@ def main():
 
         page = load_page(p)
 
-        # EXTRACT POSTS & COMMENTS ----------------------------------------------------------------
-        posts = [] # stores main posts
-        comments = [] # stores comments & replies
-        posts, comments = extract_posts_and_comments(page)
+        try:
+            # EXTRACT POSTS & COMMENTS ----------------------------------------------------------------
+            posts = [] # stores main posts
+            comments = [] # stores comments & replies
+            posts, comments = extract_posts_and_comments(page)
 
-        # SAVE POSTS & COMMENTS TO JSON -----------------------------------------------------------
-        with open("facebook_posts.json", "w", encoding="utf-8") as f:
-            json.dump(posts, f, indent=2, ensure_ascii=False)
+            # SAVE POSTS & COMMENTS TO JSON -----------------------------------------------------------
+            with open("facebook_posts.json", "w", encoding="utf-8") as f:
+                json.dump(posts, f, indent=2, ensure_ascii=False)
 
-        with open("facebook_comments.json", "w", encoding="utf-8") as f:
-            json.dump(comments, f, indent=2, ensure_ascii=False)
+            with open("facebook_comments.json", "w", encoding="utf-8") as f:
+                json.dump(comments, f, indent=2, ensure_ascii=False)
 
-        print(f"Saved {len(posts)} posts.")
+            print(f"Saved {len(posts)} posts.")
 
-        print(f"Saved {len(comments)} comments.")
+            print(f"Saved {len(comments)} comments.")
 
-        # CLOSE BROWSER ----------------------------------------------------------------------------
-        page.context.close()
-        print("-----------------------------------------------------------------------------------")
+        finally:
+            # CLOSE BROWSER ----------------------------------------------------------------------------
+            page.context.close()
+            print("-----------------------------------------------------------------------------------")
 
 if __name__ == "__main__":
     main()
