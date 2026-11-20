@@ -1,4 +1,5 @@
 from urllib.parse import urlparse, parse_qs
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 POSTS_MAX = 3 # maximum number of posts to be retrieved (what ultimately ends the looping)
 SCROLL_MAX = 8 # max scrolls if no new posts/comments are found
@@ -76,8 +77,8 @@ def find_next_post(message_elements, found_post_keys):
                 found_post_keys.add(next_key)
                 break
 
-        except Exception as e:
-            print(f"Error inspecting candidate {j}: {e}")
+        except PlaywrightTimeoutError as e:
+            print(f"Timed out inspecting comment {j}: {e}")
 
     return next_post_element
 
@@ -297,8 +298,9 @@ def find_next_comment(comment_elements, found_comment_keys):
                 found_comment_keys.add(next_key)
 
                 break
-        except Exception as e:
-            print(f"Error finding next comment: {e}")
+
+        except PlaywrightTimeoutError as e:
+            print(f"Timed out inspecting comment {i}: {e}")
 
     return next_comment
 
